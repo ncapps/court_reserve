@@ -82,7 +82,7 @@ class CourtReserveSpider(Spider):
         """Simulate a user login
 
         Args:
-            response: A scrapy Response object.
+            response: A scrapy Response object for the login page.
 
         Returns:
             Request to login form
@@ -98,10 +98,11 @@ class CourtReserveSpider(Spider):
     def verify_login(self, response):
         """Checks login result.
         A successful login request is expected to redirect to the
-        Online/Portal/Index/<ORG_ID> path.
+        Online/Portal/Index/ path.
 
         Args:
-            response: A scrapy Response object.
+            response: A scrapy Response object for a HTTP POST request
+                        to the login form.
 
         Returns:
             Request to bookings page
