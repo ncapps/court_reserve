@@ -1,5 +1,7 @@
+import re
+from datetime import date, timedelta
 from os import getenv
-import pprint
+import json
 
 from dotenv import load_dotenv
 from scrapy import Spider, Request, FormRequest
@@ -10,38 +12,22 @@ load_dotenv()
 ORG_ID = getenv("ORGANIZATION_ID")
 USERNAME = getenv("USERNAME")
 PASSWORD = getenv("PASSWORD")
+DATE_OFFSET = getenv("DATE_OFFSET")
+MEMBER_ID1 = getenv("MEMBER_ID1")
 
-REQUEST_KWARGS = {
-    "method": "POST",
-    "url": f"https://app.courtreserve.com/Online/Reservations/ReadExpanded/{ORG_ID}",
-    "headers": [
-        ("authority", "app.courtreserve.com"),
-        (
-            "sec-ch-ua",
-            '"Google Chrome";v="89", "Chromium";v="89", ";Not A ' 'Brand";v="99"x',
-        ),
-        ("accept", "*/*"),
-        ("x-requested-with", "XMLHttpRequest"),
-        ("sec-ch-ua-mobile", "?0"),
-        (
-            "user-agent",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_3) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 "
-            "Safari/537.36",
-        ),
-        ("content-type", "application/x-www-form-urlencoded; charset=UTF-8"),
-        ("origin", "https://app.courtreserve.com"),
-        ("sec-fetch-site", "same-origin"),
-        ("sec-fetch-mode", "cors"),
-        ("sec-fetch-dest", "empty"),
-        (
-            "referer",
-            "https://app.courtreserve.com/Online/Reservations/Bookings/6801?sId=797",
-        ),
-        ("accept-language", "en-US,en;q=0.9"),
-    ],
-    "body": "sort=&group=&filter=&jsonData=%7B%22startDate%22%3A%222021-04-11T07%3A00%3A00.000Z%22%2C%22end%22%3A%222021-04-11T07%3A00%3A00.000Z%22%2C%22orgId%22%3A%226801%22%2C%22TimeZone%22%3A%22America%2FLos_Angeles%22%2C%22Date%22%3A%22Sun%2C+11+Apr+2021+07%3A00%3A00+GMT%22%2C%22KendoDate%22%3A%7B%22Year%22%3A2021%2C%22Month%22%3A4%2C%22Day%22%3A11%7D%2C%22UiCulture%22%3A%22en-US%22%2C%22CostTypeId%22%3A%2286377%22%2C%22CustomSchedulerId%22%3A%22797%22%2C%22ReservationMinInterval%22%3A%2260%22%2C%22SelectedCourtIds%22%3A%2214609%2C14610%2C14611%2C14612%2C14613%2C14614%2C14615%2C14616%2C14617%22%2C%22MemberIds%22%3A%22404752%22%2C%22MemberFamilyId%22%3A%22%22%7D",
-}
+
+def get_date_offset(date, offset=0):
+    """Returns the date offset
+
+    Args:
+        date: A datetime date.
+        offset: (int) Offset in days.
+
+    Returns:
+        Returns A datetime date with offset.
+    """
+    # Use -8 for UTC to PST offset. This does not consider day light savings.
+    return date + timedelta(hours=-8, days=int(offset))
 
 
 class CourtReserveSpider(Spider):
@@ -50,7 +36,14 @@ class CourtReserveSpider(Spider):
     domain = "https://app.courtreserve.com"
 
     def __init__(
-        self, category=None, org_id="", username="", password="", *args, **kwargs
+        self,
+        category=None,
+        org_id="",
+        username="",
+        password="",
+        date_offset=0,
+        *args,
+        **kwargs,
     ):
         """Initializer for CourtReserveSpider class
 
@@ -58,12 +51,16 @@ class CourtReserveSpider(Spider):
             org_id: (str) Organization ID. Overrides ORG_ID environment variable.
             username: (str) Username for login. Overrides USERNAME environment variable.
             password: (str) Password for login. Overrides PASSWORD environment variable.
+            date_offset: (int) Number of days offset from current date to create reservatiion.
         """
         super(CourtReserveSpider, self).__init__(*args, **kwargs)
 
         self.org_id = org_id or ORG_ID
         self.username = username or USERNAME
         self.password = password or PASSWORD
+        self.date_offset = date_offset or DATE_OFFSET or 0
+        self.date = get_date_offset(date.today(), self.date_offset)
+        self.session_id = 0
 
     def start_requests(self):
         """Returns request to login page.
@@ -76,7 +73,9 @@ class CourtReserveSpider(Spider):
         Returns:
             Request to login page.
         """
-        yield Request(f"{self.domain}/Online/Account/LogIn/{self.org_id}", self.login)
+        yield Request(
+            url=f"{self.domain}/Online/Account/LogIn/{self.org_id}", callback=self.login
+        )
 
     def login(self, response):
         """Simulate a user login
@@ -97,32 +96,116 @@ class CourtReserveSpider(Spider):
 
     def verify_login(self, response):
         """Checks login result.
-        A successful login request is expected to redirect to the
-        Online/Portal/Index/ path.
+        A successful login request is expected to redirect
+        to Online/Portal/Index/.
 
         Args:
             response: A scrapy Response object for a HTTP POST request
                         to the login form.
 
         Returns:
-            Request to bookings page
+            Request for bookings page
 
         Raises:
             CloseSpider: Stop spider if login is not successful.
         """
         # Login success is redirected to portal home
         if response.url == f"{self.domain}/Online/Portal/Index/{self.org_id}":
+            self.logger.debug("Login success.")
+            # Get session id
+            bookings_path = response.css("li.sub-menu-li a").attrib["href"]
+            self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
             yield Request(
-                f"{self.domain}/Online/Reservations/Bookings/{self.org_id}",
-                self.get_reservations,
+                url=f"{self.domain}/Online/Reservations/Bookings/{self.org_id}?sId={self.session_id}",
+                callback=self.get_bookings,
             )
         else:
             self.logger.error("Login failed. Check username and password.")
             raise CloseSpider("Failed to login")
 
-    def get_reservations(self, response):
-        yield Request(**REQUEST_KWARGS, callback=self.parse_reservations)
+    def get_bookings(self, response):
+        """Returns a request for bookings for a given day
 
-    def parse_reservations(self, response):
-        print(f"STATUS: {response.status}")
-        pprint.pp(response.text)
+        Args:
+            response: A scrapy Response object for the bookings page
+
+        Returns:
+            Request for bookings
+        """
+        headers = self.make_bookings_request_headers()
+        body = self.make_bookings_request_body()
+        yield Request(
+            url=f"{self.domain}/Online/Reservations/ReadExpanded/{self.org_id}",
+            method="POST",
+            headers=headers,
+            body=f"jsonData={body}",
+            callback=self.parse_bookings,
+        )
+
+    def parse_bookings(self, response):
+        json_response = json.loads(response.text)
+        print(
+            f'{json_response["Total"]} bookings found on {self.date.strftime("%A, %b %d")}'
+        )
+
+    def make_bookings_request_headers(self):
+        return [
+            ("authority", "app.courtreserve.com"),
+            ("origin", self.domain),
+            (
+                "sec-ch-ua",
+                '"Google Chrome";v="89", "Chromium";v="89", ";Not A ' 'Brand";v="99"x',
+            ),
+            ("accept", "*/*"),
+            ("x-requested-with", "XMLHttpRequest"),
+            ("sec-ch-ua-mobile", "?0"),
+            (
+                "user-agent",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_3) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 "
+                "Safari/537.36",
+            ),
+            (
+                "referer",
+                f"{self.domain}/Online/Reservations/Bookings/{self.org_id}?sId={self.session_id}",
+            ),
+            ("content-type", "application/x-www-form-urlencoded; charset=UTF-8"),
+            ("sec-fetch-site", "same-origin"),
+            ("sec-fetch-mode", "cors"),
+            ("sec-fetch-dest", "empty"),
+            ("accept-language", "en-US,en;q=0.9"),
+        ]
+
+    def make_bookings_request_body(self):
+        """Returns HTTP request body for bookings request
+
+        Args:
+            None
+        Returns:
+            A dictionary containing bookings request body
+        """
+        return {
+            "startDate": f"{self.date}T07:00:00.000Z",
+            "end": f"{self.date}T07:00:00.000Z",
+            "orgId": self.org_id,
+            "TimeZone": "America/Los_Angeles",
+            "Date": (
+                f"{self.date.strftime('%a')},"
+                f"+{self.date.day}"
+                f"+{self.date.strftime('%b')}"
+                f"+{self.date.year}"
+                f"+07:00:00+GMT"
+            ),
+            "KendoDate": {
+                "Year": self.date.year,
+                "Month": self.date.month,
+                "Day": self.date.day,
+            },
+            "UiCulture": "en-US",
+            "CostTypeId": "86377",
+            "CustomSchedulerId": f"{self.session_id}",
+            "ReservationMinInterval": "60",
+            "SelectedCourtIds": "14609,14610,14611,14612,14613,14614,14615,14616,14617",
+            "MemberIds": MEMBER_ID1,
+            "MemberFamilyId": "",
+        }
