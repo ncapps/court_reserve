@@ -19,3 +19,4 @@ $ scrapy crawl court reserve
 - Write court scheduler
 - Rotate user agent
 - Use download delays (2 or higher)
+- Create abstract class and move courtreserve specific logic in a separate class
