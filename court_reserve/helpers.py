@@ -7,13 +7,12 @@ def today_offset(offset=0):
     """Returns the date offset
 
     Args:
-        date: A datetime date.
         offset: (int) Offset in days.
 
     Returns:
-        Returns A datetime date with offset.
+        Returns A datetime date with offset from today.
     """
-    # Use -8 for UTC to PST offset. This does not consider day light savings.
+    # Use -8 for UTC to PST offset. This does not consider daylight savings.
     return date.today() + timedelta(hours=-8, days=int(offset))
 
 
@@ -89,6 +88,6 @@ def bookings_request_body(org_id, reserve_date, session_id, member_id):
         "CustomSchedulerId": f"{session_id}",
         "ReservationMinInterval": "60",
         "SelectedCourtIds": "14609,14610,14611,14612,14613,14614,14615,14616,14617",
-        "MemberIds": member_id,
+        "MemberIds": f"{member_id}",
         "MemberFamilyId": "",
     }

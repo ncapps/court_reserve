@@ -22,6 +22,7 @@ def reserve_court():
     spider_settings["RESERVE_DATE"] = today_offset(
         settings.SETTINGS.get("DAY_OFFSET", 0)
     )
+    spider_settings["MEMBER_IDS"] = getenv("MEMBER_IDS").split(",")
 
     process = CrawlerProcess(settings=spider_settings)
     process.crawl(CourtReserveSpider)

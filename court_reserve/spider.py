@@ -9,6 +9,10 @@ from helpers import bookings_request_headers, bookings_request_body
 
 
 class CourtReserveSpider(Spider):
+    """Reserve a tennis court based on availability and user time and court
+    preferences.
+    """
+
     name = "courtreserve"
 
     def start_requests(self):
@@ -94,9 +98,11 @@ class CourtReserveSpider(Spider):
         """
         org_id = self.settings.get("ORG_ID")
         reserve_date = self.settings.get("RESERVE_DATE")
+        member_id = self.settings.get("MEMBER_IDS")[0]
 
         headers = bookings_request_headers(org_id, self.session_id)
-        body = bookings_request_body(org_id, reserve_date, self.session_id, 1)
+        body = bookings_request_body(org_id, reserve_date, self.session_id, member_id)
+
         yield Request(
             url=f"https://app.courtreserve.com/Online/Reservations/ReadExpanded/{org_id}",
             method="POST",
