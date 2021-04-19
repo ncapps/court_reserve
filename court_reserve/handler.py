@@ -15,13 +15,15 @@ def main():
 
 def reserve_court():
     """Run Court Reserve Spider"""
-    _settings = settings.SETTINGS.copy()
-    _settings["ORG_ID"] = getenv("ORG_ID")
-    _settings["USERNAME"] = getenv("USERNAME")
-    _settings["PASSWORD"] = getenv("PASSWORD")
-    _settings["RESERVE_DATE"] = today_offset(settings.SETTINGS.get("DAY_OFFSET", 0))
+    spider_settings = settings.SETTINGS.copy()
+    spider_settings["ORG_ID"] = getenv("ORG_ID")
+    spider_settings["USERNAME"] = getenv("USERNAME")
+    spider_settings["PASSWORD"] = getenv("PASSWORD")
+    spider_settings["RESERVE_DATE"] = today_offset(
+        settings.SETTINGS.get("DAY_OFFSET", 0)
+    )
 
-    process = CrawlerProcess(settings=_settings)
+    process = CrawlerProcess(settings=spider_settings)
     process.crawl(CourtReserveSpider)
     process.start()
 
