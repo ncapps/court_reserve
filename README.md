@@ -1,8 +1,20 @@
 # tennis-bot
 
 ## Getting started
+
+- Define environment variables
 ```sh
-$ scrapy crawl courtreserve
+# Create .env file in project root directory
+cat << EOF > .env
+ORG_ID={Organization Id}
+USERNAME={Login username}
+PASSWORD={Login password}
+EOF
+```
+
+- Execute locally
+```sh
+pipenv run crawl
 ```
 
 ## Workflow
