@@ -15,6 +15,18 @@ class CourtReserveSpider(Spider):
 
     name = "courtreserve"
 
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        """Initializer for CourtReserveSpider class
+        Args:
+            None
+        """
+        super().__init__(*args, **kwargs)
+        self.session_id = None
+
     def start_requests(self):
         """Returns request to login page.
         It is called by Scrapy when the spider is opened for scraping. Scrapy
