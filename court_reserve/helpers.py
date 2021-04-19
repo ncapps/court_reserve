@@ -91,3 +91,35 @@ def bookings_request_body(org_id, reserve_date, session_id, member_id):
         "MemberIds": f"{member_id}",
         "MemberFamilyId": "",
     }
+
+
+def merge_booking_ranges(bookings):
+    """Merge consecutive booking time ranges
+
+    Args:
+        bookings (list): List of start and end times
+
+    Returns:
+        List of consecutive bookings times merged
+    """
+    if not bookings:
+        return bookings
+
+    # Sort by start time
+    bookings.sort(key=lambda x: x[0])
+    merged_list = [(bookings[0])]
+
+    for current_start_time, current_end_time in bookings[1:]:
+        # check if the current start time is less than the end time of the
+        # latest end time in the merged list
+        last_merged_start, last_merged_end = merged_list[-1]
+
+        if current_start_time <= last_merged_end:
+            merged_list[-1] = (
+                last_merged_start,
+                max(current_end_time, last_merged_end),
+            )
+        else:
+            merged_list.append((current_start_time, current_end_time))
+
+    return merged_list
