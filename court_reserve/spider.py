@@ -2,10 +2,17 @@
 """
 import re
 import json
+from collections import defaultdict
+from time import strptime, strftime
+from pprint import pp
 
 from scrapy import Spider, Request, FormRequest
 from scrapy.exceptions import CloseSpider
-from helpers import bookings_request_headers, bookings_request_body
+from helpers import (
+    bookings_request_headers,
+    bookings_request_body,
+    merge_booking_ranges,
+)
 
 
 class CourtReserveSpider(Spider):
@@ -128,5 +135,18 @@ class CourtReserveSpider(Spider):
 
         json_response = json.loads(response.text)
         print(
-            f'{json_response["Total"]} bookings found on {reserve_date.strftime("%A, %b %d")}'
+            f'{json_response["Total"]} bookings found on {strftime("%A, %b %d", reserve_date)}'
         )
+
+        # Create dict of end time keys with list of court ids value
+        bookings_by_court = defaultdict(list)
+        for booking in json_response["Data"]:
+            court_id = str(booking["CourtId"])
+            start_time = strptime(booking["StartDisplayTime"], "%I:%M %p")
+            end_time = strptime(booking["EndDisplayTime"], "%I:%M %p")
+            bookings_by_court[court_id].append((start_time, end_time))
+
+        for k, v in bookings_by_court.items():
+            bookings_by_court[k] = merge_booking_ranges(v)
+
+        # pp(bookings_by_court)

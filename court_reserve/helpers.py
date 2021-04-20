@@ -1,6 +1,9 @@
 """ Helper functions for Court Reserve spider
 """
-from datetime import date, timedelta
+from time import tzset, time, localtime, strftime
+
+# Reset time conversion rules using TZ env var
+tzset()
 
 
 def today_offset(offset=0):
@@ -12,8 +15,9 @@ def today_offset(offset=0):
     Returns:
         Returns A datetime date with offset from today.
     """
-    # Use -8 for UTC to PST offset. This does not consider daylight savings.
-    return date.today() + timedelta(hours=-8, days=int(offset))
+    # Get offset in seconds
+    offset_seconds = offset * 60 * 60 * 24
+    return localtime(time() + offset_seconds)
 
 
 def bookings_request_headers(org_id, session_id):
@@ -67,21 +71,21 @@ def bookings_request_body(org_id, reserve_date, session_id, member_id):
         A dictionary containing bookings request body
     """
     return {
-        "startDate": f"{reserve_date}T07:00:00.000Z",
-        "end": f"{reserve_date}T07:00:00.000Z",
+        "startDate": f"{strftime('%Y-%m-%d', reserve_date)}T07:00:00.000Z",
+        "end": f"{strftime('%Y-%m-%d', reserve_date)}T07:00:00.000Z",
         "orgId": org_id,
         "TimeZone": "America/Los_Angeles",
         "Date": (
-            f"{reserve_date.strftime('%a')},"
-            f"+{reserve_date.day}"
-            f"+{reserve_date.strftime('%b')}"
-            f"+{reserve_date.year}"
-            f"+07:00:00+GMT"
+            f"{strftime('%a', reserve_date)},"
+            f" {reserve_date.tm_mday}"
+            f" {strftime('%b', reserve_date)}"
+            f" {reserve_date.tm_year}"
+            f" 07:00:00 GMT"
         ),
         "KendoDate": {
-            "Year": reserve_date.year,
-            "Month": reserve_date.month,
-            "Day": reserve_date.day,
+            "Year": reserve_date.tm_year,
+            "Month": reserve_date.tm_mon,
+            "Day": reserve_date.tm_mday,
         },
         "UiCulture": "en-US",
         "CostTypeId": "86377",
