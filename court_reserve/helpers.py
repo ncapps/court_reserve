@@ -20,8 +20,8 @@ def today_offset(offset=0):
     return localtime(time() + offset_seconds)
 
 
-def bookings_request_headers(org_id, session_id):
-    """Returns HTTP headers for requesting bookings
+def request_headers(org_id, session_id):
+    """Returns HTTP headers for requests to the app.courtreserve.com API
 
     Args:
         org_id (str): Court reserve organization id
@@ -127,3 +127,20 @@ def merge_booking_ranges(bookings):
             merged_list.append((current_start_time, current_end_time))
 
     return merged_list
+
+
+def get_available_court(bookings, requests):
+    """Find available court by requested time"""
+    for req_start_end, req_court_id in requests:
+        req_start, req_end = req_start_end
+        court_bookings = bookings.get(req_court_id)
+        available = True
+        for booked_start, booked_end in court_bookings:
+            if req_end > booked_start and req_start < booked_end:
+                available = False
+
+        if available:
+            return ((req_start, req_end), req_court_id)
+
+    # Available court not found
+    return None

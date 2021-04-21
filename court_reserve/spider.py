@@ -9,9 +9,10 @@ from pprint import pp
 from scrapy import Spider, Request, FormRequest
 from scrapy.exceptions import CloseSpider
 from helpers import (
-    bookings_request_headers,
+    request_headers,
     bookings_request_body,
     merge_booking_ranges,
+    get_available_court,
 )
 
 
@@ -119,7 +120,7 @@ class CourtReserveSpider(Spider):
         reserve_date = self.settings.get("RESERVE_DATE")
         member_id = self.settings.get("MEMBER_IDS")[0]
 
-        headers = bookings_request_headers(org_id, self.session_id)
+        headers = request_headers(org_id, self.session_id)
         body = bookings_request_body(org_id, reserve_date, self.session_id, member_id)
 
         yield Request(
@@ -134,7 +135,7 @@ class CourtReserveSpider(Spider):
         reserve_date = self.settings.get("RESERVE_DATE")
 
         json_response = json.loads(response.text)
-        print(
+        self.logger.info(
             f'{json_response["Total"]} bookings found on {strftime("%A, %b %d", reserve_date)}'
         )
 
@@ -146,7 +147,33 @@ class CourtReserveSpider(Spider):
             end_time = strptime(booking["EndDisplayTime"], "%I:%M %p")
             bookings_by_court[court_id].append((start_time, end_time))
 
-        for k, v in bookings_by_court.items():
-            bookings_by_court[k] = merge_booking_ranges(v)
+        for cid, bookings in bookings_by_court.items():
+            bookings_by_court[cid] = merge_booking_ranges(bookings)
+        self.logger.debug(bookings_by_court)
 
-        # pp(bookings_by_court)
+        # Get settings for a given day
+        day_name = strftime("%A", reserve_date).lower()
+        reserve_day_schedule = self.settings.get("SCHEDULE").get(day_name)
+
+        # Get list of requesting times and court
+        if reserve_day_schedule:
+            reserve_requests = [
+                (
+                    (
+                        strptime(start_end[0], "%I:%M %p"),
+                        strptime(start_end[1], "%I:%M %p"),
+                    ),
+                    cid,
+                )
+                for start_end in reserve_day_schedule["request_times"]
+                for cid in reserve_day_schedule["court_ids"]
+            ]
+
+        else:
+
+            self.logger.error(f'Schedule not found for "{day_name}". Check settings.')
+            raise CloseSpider(f"No schedule for {day_name}")
+
+        # Find court availability
+        open_court = get_available_court(bookings_by_court, reserve_requests)
+        pp(open_court)

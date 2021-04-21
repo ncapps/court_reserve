@@ -1,6 +1,7 @@
 """ Handler for court reserve spider
 """
 from os import getenv
+from copy import deepcopy
 
 from scrapy.crawler import CrawlerProcess
 from spider import CourtReserveSpider
@@ -15,7 +16,7 @@ def main():
 
 def reserve_court():
     """Run Court Reserve Spider"""
-    spider_settings = settings.SETTINGS.copy()
+    spider_settings = deepcopy(settings.SETTINGS)
     # Get reserve date using offset
     spider_settings["RESERVE_DATE"] = today_offset(
         settings.SETTINGS.get("DAY_OFFSET", 0)
