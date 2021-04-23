@@ -6,7 +6,7 @@ from copy import deepcopy
 from scrapy.crawler import CrawlerProcess
 from spider import CourtReserveSpider
 from helpers import today_offset
-import settings
+from settings import SETTINGS
 
 
 def main():
@@ -16,19 +16,18 @@ def main():
 
 def reserve_court():
     """Run Court Reserve Spider"""
-    spider_settings = deepcopy(settings.SETTINGS)
+    settings = deepcopy(SETTINGS)
+
     # Get reserve date using offset
-    spider_settings["RESERVE_DATE"] = today_offset(
-        settings.SETTINGS.get("DAY_OFFSET", 0)
-    )
+    settings["RESERVE_DATE"] = today_offset(settings.get("DAY_OFFSET", 0))
 
     # TODO get secrets from secrets manager
-    spider_settings["ORG_ID"] = getenv("ORG_ID")
-    spider_settings["USERNAME"] = getenv("USERNAME")
-    spider_settings["PASSWORD"] = getenv("PASSWORD")
-    spider_settings["MEMBER_IDS"] = getenv("MEMBER_IDS").split(",")
+    settings["ORG_ID"] = getenv("ORG_ID")
+    settings["USERNAME"] = getenv("USERNAME")
+    settings["PASSWORD"] = getenv("PASSWORD")
+    settings["MEMBER_IDS"] = getenv("MEMBER_IDS").split(",")
 
-    process = CrawlerProcess(settings=spider_settings)
+    process = CrawlerProcess(settings=settings)
     process.crawl(CourtReserveSpider)
     process.start()
 
