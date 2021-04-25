@@ -31,7 +31,7 @@ def get_args():
 
 
 def main():
-    """Main function for CLI
+    """Get CLI args and start Scrapy crawler
 
     Args:
         None

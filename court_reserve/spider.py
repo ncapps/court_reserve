@@ -1,4 +1,4 @@
-""" Reserve court time using a Scrapy spider
+""" Reserve tennis court time using Scrapy
 """
 import re
 import json
@@ -11,14 +11,16 @@ from scrapy import Spider, Request, FormRequest
 from scrapy.exceptions import CloseSpider
 from dotenv import dotenv_values
 from helpers import (
-    request_headers,
-    get_reservations_body,
+    get_http_headers,
+    get_booking_date,
+    get_bookings_body,
     merge_booking_ranges,
     get_available_court,
 )
 
 # override loaded values with environment variables
 CONFIG = {**dotenv_values(".env"), **os.environ}
+BASE_URL = "https://app.courtreserve.com/Online"
 
 
 class CourtReserveSpider(Spider):
@@ -28,8 +30,6 @@ class CourtReserveSpider(Spider):
 
     def start_requests(self):
         """Returns request to login page.
-        It is called by Scrapy when the spider is opened for scraping. Scrapy
-        calls it only once.
 
         Args:
             None
@@ -37,30 +37,30 @@ class CourtReserveSpider(Spider):
         Returns:
             Request to login page.
         """
-        cb_kwargs = {"login_count": 0}
+        cb_kwargs = {"login_attempts": 0}
         yield Request(
-            url=f"https://app.courtreserve.com/Online/Account/LogIn/{CONFIG['ORG_ID']}",
+            url=f"{BASE_URL}/Account/LogIn/{CONFIG['ORG_ID']}",
             cb_kwargs=cb_kwargs,
         )
 
     def parse(self, response, **kwargs):
-        """Default callback for Scrapy response
+        """Default callback for Scrapy responses
 
         Args:
             response: Scrapy response object
 
         Returns:
-            Scrapy request object
+            Scrapy request object or None
         """
         cb_kwargs = response.cb_kwargs.copy()
-        re_pattern = r"^https://app.courtreserve.com/Online/([A-Za-z]*)"
+        re_pattern = r"^https://app.courtreserve.com/Online/([A-Za-z]+[/]?[A-Za-z]+)"
         path = re.search(re_pattern, response.url).group(1).lower()
         self.logger.debug(f"Response path: {path}")
 
-        if path == "account":
+        if path == "account/login":
             # Retry login once
-            if cb_kwargs["login_count"] < 2:
-                cb_kwargs["login_count"] += 1
+            if cb_kwargs["login_attempts"] < 2:
+                cb_kwargs["login_attempts"] += 1
                 return FormRequest.from_response(
                     response,
                     formid="loginForm",
@@ -75,86 +75,46 @@ class CourtReserveSpider(Spider):
             self.logger.error("Login failed. Check username and password.")
             raise CloseSpider("Failed to login")
 
-        if path == "portal":
+        if path == "portal/index":
             self.logger.debug("Login success")
-
-        return None
-
-    def login(self, response):
-        """Simulate a user login
-
-        Args:
-            response: A scrapy Response object for the login page.
-
-        Returns:
-            Request to login form
-        """
-        user = self.settings.get("USERNAME")
-        pwd = self.settings.get("PASSWORD")
-
-        return FormRequest.from_response(
-            response,
-            formid="loginForm",
-            formdata={"UserNameOrEmail": user, "Password": pwd},
-            clickdata={"type": "button", "onclick": "submitLoginForm()"},
-            callback=self.verify_login,
-        )
-
-    def verify_login(self, response):
-        """Checks login result.
-        A successful login request is expected to redirect
-        to Online/Portal/Index/.
-
-        Args:
-            response: A scrapy Response object for a HTTP POST request
-                        to the login form.
-
-        Returns:
-            Request for bookings page
-
-        Raises:
-            CloseSpider: Stop spider if login is not successful.
-        """
-        org_id = self.settings.get("ORG_ID")
-
-        # Login success is redirected to portal home
-        if response.url == f"https://app.courtreserve.com/Online/Portal/Index/{org_id}":
-            self.logger.debug("Login success.")
-            # Get session id
+            # Get session id from portal page
             bookings_path = response.css("li.sub-menu-li a").attrib["href"]
-            self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
+            cb_kwargs["session_id"] = re.search("sId=([0-9]+)", bookings_path).group(1)
+            self.logger.debug(f"Session id: {cb_kwargs['session_id']}")
+
+            headers = get_http_headers(CONFIG["ORG_ID"], cb_kwargs["session_id"])
+            self.logger.debug(f"Request headers: {headers}")
+
+            booking_date = get_booking_date(
+                int(self.settings["DAYS_OFFSET"]), self.settings["TIMEZONE"]
+            )
+            self.logger.debug(f"Booking date: {booking_date}")
+
+            court_ids = ",".join([str(x) for x in self.settings["COURTS"].keys()])
+            body = get_bookings_body(
+                CONFIG["ORG_ID"],
+                booking_date,
+                cb_kwargs["session_id"],
+                CONFIG["MEMBER_ID1"],
+                self.settings["TIMEZONE"],
+                CONFIG["COST_TYPE_ID"],
+                court_ids,
+            )
+            self.logger.debug(f"Request body: {body}")
 
             return Request(
-                url=f"https://app.courtreserve.com/Online/Reservations/Bookings/{org_id}?sId={self.session_id}",
-                callback=self.get_bookings,
+                url=f"{BASE_URL}/Reservations/ReadExpanded/{CONFIG['ORG_ID']}",
+                method="POST",
+                headers=headers,
+                body=f"jsonData={body}",
+                cb_kwargs=cb_kwargs,
             )
-        else:
-            self.logger.error("Login failed. Check username and password.")
-            raise CloseSpider("Failed to login")
 
-    def get_bookings(self, response):
-        """Returns a request for bookings for a given day
+        if path == "reservations/readexpanded":
+            json_response = json.loads(response.text)
+            self.logger.debug(f'Found {json_response["Total"]} existing reservations')
 
-        Args:
-            response: A scrapy Response object for the bookings page
-
-        Returns:
-            Request for bookings
-        """
-        org_id = self.settings.get("ORG_ID")
-        reserve_date = self.settings.get("BOOKING_DATE")
-        member_id = self.settings.get("MEMBER_IDS")[0]
-
-        headers = request_headers(org_id, self.session_id)
-        body = get_reservations_body(org_id, reserve_date, self.session_id, member_id)
-
-        yield Request(
-            url=f"https://app.courtreserve.com/Online/Reservations/ReadExpanded/{org_id}",
-            method="POST",
-            headers=headers,
-            body=f"jsonData={body}",
-            callback=self.parse_bookings,
-        )
+        return None
 
     def parse_bookings(self, response):
         reserve_date = self.settings.get("BOOKING_DATE")
