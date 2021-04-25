@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "8bbcdf4d5ee234209d6faffa7797cdc714726869a9a8a28cb0639fdd5f768411"
+            "sha256": "1388882b2c4c4f3e0bd2e7741861d3937b11bfab17cd68096b2d5734a3033775"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -304,6 +304,14 @@
             "index": "pypi",
             "version": "==2.8.1"
         },
+        "python-dotenv": {
+            "hashes": [
+                "sha256:471b782da0af10da1a80341e8438fca5fadeba2881c54360d5fd8d03d03a4f4a",
+                "sha256:49782a97c9d641e8a09ae1d9af0856cc587c8d2474919342d5104d85be9890b2"
+            ],
+            "index": "pypi",
+            "version": "==0.17.0"
+        },
         "queuelib": {
             "hashes": [
                 "sha256:631d067c9be57e395c382d680d3653ca1452cd29e8da25c5e8d94b5c0c528c31",
@@ -420,11 +428,11 @@
         },
         "astroid": {
             "hashes": [
-                "sha256:f040fe9c4a2a7699a8ec30c9ed10fb59067c97f64c36577f476c0953ba29847c",
-                "sha256:f9f472d4002d55199b1c151ef0570cf71d42aaa34aaa3d29c3e41c75f6f47564"
+                "sha256:0f156ea0feec7fb78fd035d041a047b37f2aae9345d7f7960670bcd961182f77",
+                "sha256:b8823e7af8044b97b4b0c1bad06b980e4ce5519fee6d3d77ea5333a2b2d61d9a"
             ],
             "markers": "python_version ~= '3.6'",
-            "version": "==2.5.4"
+            "version": "==2.5.5"
         },
         "black": {
             "hashes": [
@@ -500,11 +508,11 @@
         },
         "pylint": {
             "hashes": [
-                "sha256:209d712ec870a0182df034ae19f347e725c1e615b2269519ab58a35b3fcbbe7a",
-                "sha256:bd38914c7731cdc518634a8d3c5585951302b6e2b6de60fbb3f7a0220e21eeee"
+                "sha256:082a6d461b54f90eea49ca90fff4ee8b6e45e8029e5dbd72f6107ef84f3779c0",
+                "sha256:a01cd675eccf6e25b3bdb42be184eb46aaf89187d612ba0fb5f93328ed6b0fd5"
             ],
             "index": "pypi",
-            "version": "==2.7.4"
+            "version": "==2.8.0"
         },
         "regex": {
             "hashes": [

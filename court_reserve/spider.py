@@ -2,38 +2,29 @@
 """
 import re
 import json
+import os
 from collections import defaultdict
-from time import strptime, strftime
+from time import strptime, strftime, localtime
 from pprint import pp
 
 from scrapy import Spider, Request, FormRequest
 from scrapy.exceptions import CloseSpider
+from dotenv import dotenv_values
 from helpers import (
     request_headers,
-    bookings_request_body,
+    get_reservations_body,
     merge_booking_ranges,
     get_available_court,
 )
 
+# override loaded values with environment variables
+CONFIG = {**dotenv_values(".env"), **os.environ}
+
 
 class CourtReserveSpider(Spider):
-    """Reserve a tennis court based on availability and user time and court
-    preferences.
-    """
+    """Reserve a tennis court"""
 
     name = "courtreserve"
-
-    def __init__(
-        self,
-        *args,
-        **kwargs,
-    ):
-        """Initializer for CourtReserveSpider class
-        Args:
-            None
-        """
-        super().__init__(*args, **kwargs)
-        self.session_id = None
 
     def start_requests(self):
         """Returns request to login page.
@@ -46,14 +37,48 @@ class CourtReserveSpider(Spider):
         Returns:
             Request to login page.
         """
-        org_id = self.settings.get("ORG_ID")
+        cb_kwargs = {"login_count": 0}
+        yield Request(
+            url=f"https://app.courtreserve.com/Online/Account/LogIn/{CONFIG['ORG_ID']}",
+            cb_kwargs=cb_kwargs,
+        )
 
-        return [
-            Request(
-                url=f"https://app.courtreserve.com/Online/Account/LogIn/{org_id}",
-                callback=self.login,
-            )
-        ]
+    def parse(self, response, **kwargs):
+        """Default callback for Scrapy response
+
+        Args:
+            response: Scrapy response object
+
+        Returns:
+            Scrapy request object
+        """
+        cb_kwargs = response.cb_kwargs.copy()
+        re_pattern = r"^https://app.courtreserve.com/Online/([A-Za-z]*)"
+        path = re.search(re_pattern, response.url).group(1).lower()
+        self.logger.debug(f"Response path: {path}")
+
+        if path == "account":
+            # Retry login once
+            if cb_kwargs["login_count"] < 2:
+                cb_kwargs["login_count"] += 1
+                return FormRequest.from_response(
+                    response,
+                    formid="loginForm",
+                    formdata={
+                        "UserNameOrEmail": CONFIG["USERNAME"],
+                        "Password": CONFIG["PASSWORD"],
+                    },
+                    clickdata={"type": "button", "onclick": "submitLoginForm()"},
+                    cb_kwargs=cb_kwargs,
+                )
+
+            self.logger.error("Login failed. Check username and password.")
+            raise CloseSpider("Failed to login")
+
+        if path == "portal":
+            self.logger.debug("Login success")
+
+        return None
 
     def login(self, response):
         """Simulate a user login
@@ -117,11 +142,11 @@ class CourtReserveSpider(Spider):
             Request for bookings
         """
         org_id = self.settings.get("ORG_ID")
-        reserve_date = self.settings.get("RESERVE_DATE")
+        reserve_date = self.settings.get("BOOKING_DATE")
         member_id = self.settings.get("MEMBER_IDS")[0]
 
         headers = request_headers(org_id, self.session_id)
-        body = bookings_request_body(org_id, reserve_date, self.session_id, member_id)
+        body = get_reservations_body(org_id, reserve_date, self.session_id, member_id)
 
         yield Request(
             url=f"https://app.courtreserve.com/Online/Reservations/ReadExpanded/{org_id}",
@@ -132,19 +157,22 @@ class CourtReserveSpider(Spider):
         )
 
     def parse_bookings(self, response):
-        reserve_date = self.settings.get("RESERVE_DATE")
+        reserve_date = self.settings.get("BOOKING_DATE")
 
         json_response = json.loads(response.text)
         self.logger.info(
-            f'{json_response["Total"]} bookings found on {strftime("%A, %b %d", reserve_date)}'
+            f'Found {json_response["Total"]} bookings on {strftime("%A, %b %d", reserve_date)}'
         )
 
+        time_re = re.compile("[0-9]+")
         # Create dict of end time keys with list of court ids value
         bookings_by_court = defaultdict(list)
         for booking in json_response["Data"]:
             court_id = str(booking["CourtId"])
-            start_time = strptime(booking["StartDisplayTime"], "%I:%M %p")
-            end_time = strptime(booking["EndDisplayTime"], "%I:%M %p")
+            start_time = localtime(
+                int(time_re.search(booking["Start"]).group(0)) / 1000
+            )
+            end_time = localtime(int(time_re.search(booking["End"]).group(0)) / 1000)
             bookings_by_court[court_id].append((start_time, end_time))
 
         for cid, bookings in bookings_by_court.items():
@@ -176,4 +204,26 @@ class CourtReserveSpider(Spider):
 
         # Find court availability
         open_court = get_available_court(bookings_by_court, reserve_requests)
-        pp(open_court)
+        if open_court:
+            court_label = self.settings.get("COURT_LABEL").get(open_court["court_id"])
+            self.logger.info(
+                f"{court_label} is open "
+                f'from {strftime("%I:%M %p", open_court["start_end"][0])} '
+                f'to {strftime("%I:%M %p", open_court["start_end"][1])}'
+            )
+            # "start=Thu%20Apr%2022%202021%2019:00:00%20GMT-0700%20(Pacific%20Daylight%20Time)&"
+            # "end=Thu%20Apr%2022%202021%2019:30:00%20GMT-0700%20(Pacific%20Daylight%20Time)&"
+            request_url = (
+                "https://app.courtreserve.com/Online/Reservations/CreateReservationCourtsview/"
+                f'{self.settings.get("ORG_ID")}?'
+                f'start={strftime("%a %b %Y %H:%M:%S %z (%Z)", open_court["start_end"][0])}&'
+                f'end={strftime("%a %b %Y %H:%M:%S %z (%Z)", open_court["start_end"][1])}&'
+                f"courtLabel={court_label}&"
+                f"customSchedulerId={self.session_id}"
+            )
+            pp(request_url)
+            # return Request(url=request_url)
+
+        else:
+            self.logger.info("Open court not found")
+            raise CloseSpider("Open court not found")
