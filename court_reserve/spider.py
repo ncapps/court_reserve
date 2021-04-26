@@ -57,6 +57,7 @@ class CourtReserveSpider(Spider):
         path = re.search(re_pattern, response.url).group(1).lower()
         self.logger.debug(f"Response path: {path}")
 
+        # 1) Login to app
         if path == "account/login":
             # Retry login once
             if cb_kwargs["login_attempts"] < 2:
@@ -75,6 +76,7 @@ class CourtReserveSpider(Spider):
             self.logger.error("Login failed. Check username and password.")
             raise CloseSpider("Failed to login")
 
+        # 2) Get existing court reservations
         if path == "portal/index":
             self.logger.debug("Login success")
             # Get session id from portal page
@@ -112,6 +114,7 @@ class CourtReserveSpider(Spider):
                 cb_kwargs=cb_kwargs,
             )
 
+        # 3) Find open court
         if path == "reservations/readexpanded":
             json_response = json.loads(response.text)
             self.logger.debug(f'Found {json_response["Total"]} existing reservations')
@@ -156,6 +159,7 @@ class CourtReserveSpider(Spider):
                 cb_kwargs=cb_kwargs,
             )
 
+        # 4) Reserve a court
         if path == "reservations/createreservationcourtsview":
             token = response.css("#createReservation-Form input").attrib["value"]
             self.logger.debug(f"Verification Token: {token}")
