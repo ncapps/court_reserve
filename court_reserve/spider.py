@@ -14,8 +14,7 @@ from helpers import (
     get_http_headers,
     get_booking_date,
     get_bookings_body,
-    merge_booking_ranges,
-    get_available_court,
+    get_bookings_by_court,
 )
 
 # override loaded values with environment variables
@@ -113,6 +112,10 @@ class CourtReserveSpider(Spider):
         if path == "reservations/readexpanded":
             json_response = json.loads(response.text)
             self.logger.debug(f'Found {json_response["Total"]} existing reservations')
+            bookings = get_bookings_by_court(
+                json_response["Data"], self.settings["TIMEZONE"]
+            )
+            self.logger.debug(f"Summarized bookings: {bookings}")
 
         return None
 

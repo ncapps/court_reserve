@@ -1,6 +1,8 @@
 """ Helper functions for Court Reserve spider
 """
+import re
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 from dateutil import tz
 
@@ -151,12 +153,46 @@ def get_create_booking_body(org_id, session_id, member_id, cost_type_id):
     }
 
 
+def get_bookings_by_court(bookings, tz_name):
+    """Groups bookings by court
+
+    Args:
+        bookings (list): List of booking data received from courtreserve
+        tz_name (str): IANA time zone name
+
+    Returns:
+        (dict) Grouped by court id, a list of start and end datetimes a
+                court is reserved
+    """
+    tz_obj = tz.gettz(tz_name) if tz_name else tz.tzlocal()
+    bookings_by_court = defaultdict(list)
+    epoch_re = re.compile("[0-9]+")
+    # Get datetime objects from POSIX timestamp, grouped by court id
+    for booking in bookings:
+        bookings_by_court[str(booking["CourtId"])].append(
+            (
+                datetime.fromtimestamp(
+                    int(epoch_re.search(booking["Start"]).group(0)) / 1000, tz=tz_obj
+                ),
+                datetime.fromtimestamp(
+                    int(epoch_re.search(booking["End"]).group(0)) / 1000, tz=tz_obj
+                ),
+            )
+        )
+
+    # Merge contiguous reservations by court
+    for court_id, _bookings in bookings_by_court.items():
+        bookings_by_court[court_id] = merge_bookings(_bookings)
+
+    return bookings_by_court
+
+
 def get_booking_date(offset=0, tz_name=""):
     """Returns the booking date
 
     Args:
         offset (int): Number of days from current date to booking date
-        tz (str): IANA name of the time zone
+        tz_name (str): IANA time zone name
             https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 
     Returns:
@@ -167,14 +203,14 @@ def get_booking_date(offset=0, tz_name=""):
     return datetime.now(tz=tz_obj) + days_offset
 
 
-def merge_booking_ranges(bookings):
-    """Merge consecutive booking time ranges
+def merge_bookings(bookings):
+    """Merge contiguous bookings
 
     Args:
         bookings (list): List of start and end times
 
     Returns:
-        List of consecutive bookings times merged
+        List of merged bookings
     """
     if not bookings:
         return bookings
