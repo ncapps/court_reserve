@@ -16,6 +16,7 @@ from helpers import (
     get_bookings_body,
     get_bookings_by_court,
     get_day_preferences,
+    find_open_court,
 )
 
 # override loaded values with environment variables
@@ -119,17 +120,24 @@ class CourtReserveSpider(Spider):
             )
             self.logger.debug(f"Summarized bookings: {bookings}")
 
+            # Get court and time preferences from settings
             try:
-                prefs = get_day_preferences(
+                preferences = get_day_preferences(
                     self.settings["PREFERENCES"], cb_kwargs["booking_date"]
                 )
-                self.logger.debug(f"Day preferences: {prefs}")
-            except KeyError as error:
-                raise CloseSpider(
-                    "Day preferences not found. Check settings."
-                ) from error
+                self.logger.debug(f"Day preferences: {preferences}")
+            except KeyError as err:
+                raise CloseSpider("Day preferences not found. Check settings.") from err
 
-            # TODO Find court
+            # Find open court
+            open_court = find_open_court(bookings, preferences)
+            self.logger.debug(
+                f"{open_court[0]} is open "
+                f'from {open_court[1].strftime("%I:%M %p")} '
+                f'to {open_court[2].strftime("%I:%M %p")}'
+            )
+            if not open_court:
+                raise CloseSpider("Open court not found.")
 
         return None
 

@@ -103,7 +103,7 @@ def get_create_booking_body(org_id, session_id, member_id, cost_type_id):
         A dictionary that represents the HTTP request body
     """
     return {
-        "__RequestVerificationToken": "Knctp8jpOwkAhrLi6Ui9apH6KarxUWWrt7Ghfddn7VKgZhKYc64NIeR6oCaM4j2b-FIZxNskLbPpxiW4QwS-2VVpEFbhRi_xqcYW6CJ3raSc1kGoMNpdv64KL6iR-aW0WEr52ypox8kJ-GyqkP-idA2",
+        "__RequestVerificationToken": "",  # TODO
         "Id": org_id,
         "OrgId": org_id,
         "MemberId": member_id,
@@ -265,18 +265,26 @@ def merge_bookings(bookings):
     return merged_list
 
 
-def get_available_court(bookings, requests):
-    """Find available court by requested time"""
-    for req_start_end, req_court_id in requests:
-        req_start, req_end = req_start_end
-        court_bookings = bookings.get(req_court_id)
-        available = True
-        for booked_start, booked_end in court_bookings:
-            if req_end > booked_start and req_start < booked_end:
-                available = False
+def find_open_court(bookings, preferences):
+    """Compares existing bookings with user preferences
+        and returns the first open court found
 
-        if available:
-            return {"start_end": (req_start, req_end), "court_id": req_court_id}
+    Args:
+        bookings (dict): Court bookings grouped by court id
+        preferences (list): List of court and time preferences
 
-    # Available court not found
+    Returns:
+        (tuple) Court id, start datetime, end datetime
+
+    """
+    for court_id, pref_start_end in preferences:
+        pref_start, pref_end = pref_start_end
+        conflict = False
+        for booked_start, booked_end in bookings.get(court_id):
+            if pref_end > booked_start and pref_start < booked_end:
+                conflict = True
+        if not conflict:
+            return (court_id, pref_start, pref_end)
+
+    # Court and time match not found
     return None
