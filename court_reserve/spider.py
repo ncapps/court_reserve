@@ -15,6 +15,7 @@ from helpers import (
     get_booking_date,
     get_bookings_body,
     get_bookings_by_court,
+    get_day_preferences,
 )
 
 # override loaded values with environment variables
@@ -84,15 +85,15 @@ class CourtReserveSpider(Spider):
             headers = get_http_headers(CONFIG["ORG_ID"], cb_kwargs["session_id"])
             self.logger.debug(f"Request headers: {headers}")
 
-            booking_date = get_booking_date(
+            cb_kwargs["booking_date"] = get_booking_date(
                 int(self.settings["DAYS_OFFSET"]), self.settings["TIMEZONE"]
             )
-            self.logger.debug(f"Booking date: {booking_date}")
+            self.logger.debug(f"Booking date: {cb_kwargs['booking_date']}")
 
             court_ids = ",".join([str(x) for x in self.settings["COURTS"].keys()])
             body = get_bookings_body(
                 CONFIG["ORG_ID"],
-                booking_date,
+                cb_kwargs["booking_date"],
                 cb_kwargs["session_id"],
                 CONFIG["MEMBER_ID1"],
                 self.settings["TIMEZONE"],
@@ -112,10 +113,23 @@ class CourtReserveSpider(Spider):
         if path == "reservations/readexpanded":
             json_response = json.loads(response.text)
             self.logger.debug(f'Found {json_response["Total"]} existing reservations')
+
             bookings = get_bookings_by_court(
                 json_response["Data"], self.settings["TIMEZONE"]
             )
             self.logger.debug(f"Summarized bookings: {bookings}")
+
+            try:
+                prefs = get_day_preferences(
+                    self.settings["PREFERENCES"], cb_kwargs["booking_date"]
+                )
+                self.logger.debug(f"Day preferences: {prefs}")
+            except KeyError as error:
+                raise CloseSpider(
+                    "Day preferences not found. Check settings."
+                ) from error
+
+            # TODO Find court
 
         return None
 

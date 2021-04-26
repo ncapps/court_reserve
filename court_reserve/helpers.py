@@ -187,6 +187,36 @@ def get_bookings_by_court(bookings, tz_name):
     return bookings_by_court
 
 
+def get_day_preferences(preferences, booking_date):
+    """Get time and court preferences for the booking date day
+        of the week
+
+    Args:
+        schedule (dict): Booking time and court ordered by preferences for each day
+                            of the week
+        booking_date (datetime): Datetime to reserve a court
+
+    Returns:
+        (list) List of court and booking time ordered by preference for the booking date
+
+    Throws:
+        (KeyError)
+    """
+
+    def str_to_date(hour_min):
+        _dt = datetime.strptime(hour_min, "%I:%M %p")
+        return booking_date.replace(
+            hour=_dt.hour, minute=_dt.minute, second=0, microsecond=0
+        )
+
+    weekday_name = booking_date.strftime("%A").lower()
+    return [
+        (court_id, (str_to_date(start), str_to_date(end)))
+        for start, end in preferences[weekday_name]["start_end_times"]
+        for court_id in preferences[weekday_name]["court_ids"]
+    ]
+
+
 def get_booking_date(offset=0, tz_name=""):
     """Returns the booking date
 
