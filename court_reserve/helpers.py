@@ -19,7 +19,6 @@ def get_http_headers(org_id, session_id):
     """
     return [
         ("authority", "app.courtreserve.com"),
-        ("origin", "https://app.courtreserve.com"),
         (
             "sec-ch-ua",
             '"Google Chrome";v="89", "Chromium";v="89", ";Not A ' 'Brand";v="99"x',
@@ -33,14 +32,15 @@ def get_http_headers(org_id, session_id):
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 "
             "Safari/537.36",
         ),
+        ("content-type", "application/x-www-form-urlencoded; charset=UTF-8"),
+        ("origin", "https://app.courtreserve.com"),
+        ("sec-fetch-site", "same-origin"),
+        ("sec-fetch-mode", "cors"),
+        ("sec-fetch-dest", "empty"),
         (
             "referer",
             f"https://app.courtreserve.com/Online/Reservations/Bookings/{org_id}?sId={session_id}",
         ),
-        ("content-type", "application/x-www-form-urlencoded; charset=UTF-8"),
-        ("sec-fetch-site", "same-origin"),
-        ("sec-fetch-mode", "cors"),
-        ("sec-fetch-dest", "empty"),
         ("accept-language", "en-US,en;q=0.9"),
     ]
 
@@ -89,68 +89,75 @@ def get_bookings_body(
     }
 
 
-def get_create_booking_body(org_id, session_id, member_id, cost_type_id):
+def get_create_booking_body(session_id, token, start_time, court_id, **kwargs):
     """Returns HTTP request body used for creating a new reservation
 
     Args:
-        org_id (str): Court reserve organization id
-        reserve_date (datetime.date): Reservation date
         session_id (str): User session id
-        member_id (str): User member id
-        cost_type_id (str): Cost type id
+        token (str): Verification token
+        start_time (datetime): Reservation start time
+        court_id (str): Court id to reserve
+        kwargs (dict): Environment variables including organization id, member ids, etc.
 
     Returns:
-        A dictionary that represents the HTTP request body
+        A string that represents the HTTP request body
     """
-    return {
-        "__RequestVerificationToken": "",  # TODO
-        "Id": org_id,
-        "OrgId": org_id,
-        "MemberId": member_id,
-        "MemberIds": "",
-        "IsConsolidatedScheduler": True,
-        "Date": "4/22/2021 12:00:00 AM",  # TODO format from date arg
-        "HoldTimeForReservation": 15,
-        "RequirePaymentWhenBookingCourtsOnline": False,
-        "AllowMemberToPickOtherMembersToPlayWith": True,
-        "ReservableEntityName": "Court",
-        "IsAllowedToPickStartAndEndTime": False,
-        "CustomSchedulerId": session_id,
-        "IsConsolidated": False,
-        "IsToday": False,
-        "SelectedCourtType": "Hard",
-        "SelectedCourtTypeId": 0,
-        "DisclosureText": "",
-        "DisclosureName": "",
-        "StartTime": "19:00:00",  # TODO add time arg
-        "CourtTypeEnum": 2,
-        "MembershipId": cost_type_id,
-        "UseMinTimeByDefault": False,
-        "IsEligibleForPreauthorization": False,
-        "ReservationTypeId": 17591,
-        "Duration": 60,
-        "CourtId": 14614,  # TODO add court id arg
-        "OwnersDropdown_input": "",
-        "OwnersDropdown": "",
-        "SelectedMembers[0].OrgMemberId": "ORG_MEMBER_ID1",  # TODO
-        "SelectedMembers[0].MemberId": "MEMBER_ID1",  # TODO
-        "SelectedMembers[0].MemberFamilyId": "",
-        "SelectedMembers[0].FirstName": "",
-        "SelectedMembers[0].LastName": "",
-        "SelectedMembers[0].Email": "",
-        "SelectedMembers[0].PaidAmt": "",
-        "SelectedMembers[0].MembershipNumber": "ORG_MEMBER_ID1",  # TODO
-        "SelectedMembers[0].PriceToPay": 0,
-        "SelectedMembers[1].OrgMemberId": "ORG_MEMBER_ID2",  # TODO
-        "SelectedMembers[1].MemberId": "MEMBER_ID2",  # TODO
-        "SelectedMembers[1].MemberFamilyId": "",
-        "SelectedMembers[1].FirstName": "",
-        "SelectedMembers[1].LastName": "",
-        "SelectedMembers[1].Email": "",
-        "SelectedMembers[1].PaidAmt": "",
-        "SelectedMembers[1].MembershipNumber": "ORG_MEMBER_ID2",
-        "SelectedMembers[1].PriceToPay": 0,
-    }
+    return (
+        f"__RequestVerificationToken={token}&"
+        f"Id={kwargs['ORG_ID']}&"
+        f"OrgId={kwargs['ORG_ID']}&"
+        f"MemberId={kwargs['MEMBER_ID1']}&"
+        "MemberIds=&"
+        "IsConsolidatedScheduler=True&"
+        f"Date={start_time.strftime('%m/%d/%Y 12:00:00 AM')}&"
+        "HoldTimeForReservation=15&"
+        "RequirePaymentWhenBookingCourtsOnline=False&"
+        "AllowMemberToPickOtherMembersToPlayWith=True&"
+        "ReservableEntityName=Court&"
+        "IsAllowedToPickStartAndEndTime=False&"
+        f"CustomSchedulerId={session_id}&"
+        "IsConsolidated=False&"
+        "IsToday=False&"
+        f"Id={kwargs['ORG_ID']}&"
+        f"OrgId={kwargs['ORG_ID']}&"
+        f"Date={start_time.strftime('%m/%d/%Y 12:00:00 AM')}&"
+        "SelectedCourtType=Hard&"
+        "SelectedCourtTypeId=0&"
+        "DisclosureText=&"
+        "DisclosureName=&"
+        f"StartTime={start_time.strftime('%H:%M:%S')}&"
+        "CourtTypeEnum=2&"
+        f"MembershipId={kwargs['COST_TYPE_ID']}&"
+        f"CustomSchedulerId={session_id}&"
+        "IsAllowedToPickStartAndEndTime=False&"
+        "UseMinTimeByDefault=False&"
+        "IsEligibleForPreauthorization=False&"
+        "ReservationTypeId=17591&"
+        "Duration=60&"
+        f"CourtId={court_id}&"
+        "OwnersDropdown_input=&"
+        "OwnersDropdown=&"
+        f"SelectedMembers[0].OrgMemberId={kwargs['ORG_MEMBER_ID1']}&"
+        f"SelectedMembers[0].MemberId={kwargs['MEMBER_ID1']}&"
+        "SelectedMembers[0].MemberFamilyId=&"
+        f"SelectedMembers[0].FirstName={kwargs['FIRST_NAME1']}&"
+        f"SelectedMembers[0].LastName={kwargs['LAST_NAME1']}&"
+        f"SelectedMembers[0].Email={kwargs['EMAIL1']}&"
+        "SelectedMembers[0].PaidAmt=&"
+        f"SelectedMembers[0].MembershipNumber={kwargs['ORG_MEMBER_ID1']}&"
+        "SelectedMembers[0].PriceToPay=0&"
+        f"SelectedMembers[1].OrgMemberId={kwargs['ORG_MEMBER_ID2']}&"
+        f"SelectedMembers[1].MemberId={kwargs['MEMBER_ID2']}&"
+        "SelectedMembers[1].MemberFamilyId=&"
+        f"SelectedMembers[1].FirstName={kwargs['FIRST_NAME2']}&"
+        f"SelectedMembers[1].LastName={kwargs['LAST_NAME2']}&"
+        "SelectedMembers[1].Email=&"
+        "SelectedMembers[1].PaidAmt=&"
+        f"SelectedMembers[1].MembershipNumber={kwargs['ORG_MEMBER_ID2']}&"
+        "SelectedMembers[1].PriceToPay=0&"
+        "SelectedNumberOfGuests=&"
+        "X-Requested-With=XMLHttpRequest"
+    )
 
 
 def get_bookings_by_court(bookings, tz_name):

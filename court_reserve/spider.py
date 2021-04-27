@@ -4,7 +4,6 @@ import re
 import json
 import os
 from urllib.parse import quote
-from pprint import pp
 
 from scrapy import Spider, Request, FormRequest
 from scrapy.exceptions import CloseSpider
@@ -16,6 +15,7 @@ from helpers import (
     get_bookings_by_court,
     get_day_preferences,
     find_open_court,
+    get_create_booking_body,
 )
 
 # override loaded values with environment variables
@@ -138,6 +138,7 @@ class CourtReserveSpider(Spider):
             if not open_court:
                 raise CloseSpider("Open court not found.")
 
+            cb_kwargs["open_court"] = open_court
             court_id, start, end = open_court
             court_label = self.settings["COURTS"][court_id]
             self.logger.debug(
@@ -163,3 +164,31 @@ class CourtReserveSpider(Spider):
         if path == "reservations/createreservationcourtsview":
             token = response.css("#createReservation-Form input").attrib["value"]
             self.logger.debug(f"Verification Token: {token}")
+            court_id, start, end = cb_kwargs["open_court"]
+
+            # Make request body string
+            body = get_create_booking_body(
+                session_id=cb_kwargs["session_id"],
+                token=token,
+                start_time=start,
+                court_id=court_id,
+                **CONFIG,
+            )
+            self.logger.debug(f"Request body: {body}")
+            return Request(
+                url=f"{BASE_URL}/Reservations/CreateReservation/{CONFIG['ORG_ID']}",
+                method="POST",
+                headers=cb_kwargs["headers"],
+                body=quote(body),
+                cb_kwargs=cb_kwargs,
+            )
+
+        # 5) Confirm court reservation
+        if path == "reservations/createreservation":
+            self.logger.debug(f"{response.text}")
+
+            # Failure
+            # 2021-04-26 23:58:15 [courtreserve] DEBUG: {"isValid":false,"isMessage":true,"message":"Please enter all required fields"}
+
+            # Success
+            # {"isValid":true
