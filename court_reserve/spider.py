@@ -1,20 +1,35 @@
-""" Reserve court time using a Scrapy spider
+""" Reserve tennis court time using Scrapy
 """
 import re
 import json
+import os
+from urllib.parse import quote
 
 from scrapy import Spider, Request, FormRequest
 from scrapy.exceptions import CloseSpider
-from helpers import bookings_request_headers, bookings_request_body
+from dotenv import dotenv_values
+from helpers import (
+    get_http_headers,
+    get_booking_date,
+    get_bookings_body,
+    get_bookings_by_court,
+    get_day_preferences,
+    find_open_court,
+    get_create_booking_body,
+)
+
+# override loaded values with environment variables
+CONFIG = {**dotenv_values(".env"), **os.environ}
+BASE_URL = "https://app.courtreserve.com/Online"
 
 
 class CourtReserveSpider(Spider):
+    """Reserve a tennis court"""
+
     name = "courtreserve"
 
     def start_requests(self):
         """Returns request to login page.
-        It is called by Scrapy when the spider is opened for scraping. Scrapy
-        calls it only once.
 
         Args:
             None
@@ -22,93 +37,162 @@ class CourtReserveSpider(Spider):
         Returns:
             Request to login page.
         """
-        org_id = self.settings.get("ORG_ID")
-
-        return [
-            Request(
-                url=f"https://app.courtreserve.com/Online/Account/LogIn/{org_id}",
-                callback=self.login,
-            )
-        ]
-
-    def login(self, response):
-        """Simulate a user login
-
-        Args:
-            response: A scrapy Response object for the login page.
-
-        Returns:
-            Request to login form
-        """
-        user = self.settings.get("USERNAME")
-        pwd = self.settings.get("PASSWORD")
-
-        return FormRequest.from_response(
-            response,
-            formid="loginForm",
-            formdata={"UserNameOrEmail": user, "Password": pwd},
-            clickdata={"type": "button", "onclick": "submitLoginForm()"},
-            callback=self.verify_login,
+        cb_kwargs = {"login_attempts": 0}
+        yield Request(
+            url=f"{BASE_URL}/Account/LogIn/{CONFIG['ORG_ID']}",
+            cb_kwargs=cb_kwargs,
         )
 
-    def verify_login(self, response):
-        """Checks login result.
-        A successful login request is expected to redirect
-        to Online/Portal/Index/.
+    def parse(self, response, **kwargs):
+        """Default callback for Scrapy responses
 
         Args:
-            response: A scrapy Response object for a HTTP POST request
-                        to the login form.
+            response: Scrapy response object
 
         Returns:
-            Request for bookings page
-
-        Raises:
-            CloseSpider: Stop spider if login is not successful.
+            Scrapy request object or None
         """
-        org_id = self.settings.get("ORG_ID")
+        cb_kwargs = response.cb_kwargs.copy()
+        re_pattern = r"^https://app.courtreserve.com/Online/([A-Za-z]+[/]?[A-Za-z]+)"
+        path = re.search(re_pattern, response.url).group(1).lower()
+        self.logger.debug(f"Response path: {path}")
 
-        # Login success is redirected to portal home
-        if response.url == f"https://app.courtreserve.com/Online/Portal/Index/{org_id}":
-            self.logger.debug("Login success.")
-            # Get session id
-            bookings_path = response.css("li.sub-menu-li a").attrib["href"]
-            self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
+        # 1) Login to app
+        if path == "account/login":
+            # Retry login once
+            if cb_kwargs["login_attempts"] < 2:
+                cb_kwargs["login_attempts"] += 1
+                return FormRequest.from_response(
+                    response,
+                    formid="loginForm",
+                    formdata={
+                        "UserNameOrEmail": CONFIG["USERNAME"],
+                        "Password": CONFIG["PASSWORD"],
+                    },
+                    clickdata={"type": "button", "onclick": "submitLoginForm()"},
+                    cb_kwargs=cb_kwargs,
+                )
 
-            return Request(
-                url=f"https://app.courtreserve.com/Online/Reservations/Bookings/{org_id}?sId={self.session_id}",
-                callback=self.get_bookings,
-            )
-        else:
             self.logger.error("Login failed. Check username and password.")
             raise CloseSpider("Failed to login")
 
-    def get_bookings(self, response):
-        """Returns a request for bookings for a given day
+        # 2) Get existing court reservations
+        if path == "portal/index":
+            self.logger.debug("Login success")
+            # Get session id from portal page
+            bookings_path = response.css("li.sub-menu-li a").attrib["href"]
+            cb_kwargs["session_id"] = re.search("sId=([0-9]+)", bookings_path).group(1)
+            self.logger.debug(f"Session id: {cb_kwargs['session_id']}")
 
-        Args:
-            response: A scrapy Response object for the bookings page
+            cb_kwargs["headers"] = get_http_headers(
+                CONFIG["ORG_ID"], cb_kwargs["session_id"]
+            )
+            self.logger.debug(f"Request headers: {cb_kwargs}")
 
-        Returns:
-            Request for bookings
-        """
-        org_id = self.settings.get("ORG_ID")
-        reserve_date = self.settings.get("RESERVE_DATE")
+            cb_kwargs["booking_date"] = get_booking_date(
+                int(self.settings["DAYS_OFFSET"]), self.settings["TIMEZONE"]
+            )
+            self.logger.debug(f"Booking date: {cb_kwargs['booking_date']}")
 
-        headers = bookings_request_headers(org_id, self.session_id)
-        body = bookings_request_body(org_id, reserve_date, self.session_id, 1)
-        yield Request(
-            url=f"https://app.courtreserve.com/Online/Reservations/ReadExpanded/{org_id}",
-            method="POST",
-            headers=headers,
-            body=f"jsonData={body}",
-            callback=self.parse_bookings,
-        )
+            court_ids = ",".join([str(x) for x in self.settings["COURTS"].keys()])
+            body = get_bookings_body(
+                CONFIG["ORG_ID"],
+                cb_kwargs["booking_date"],
+                cb_kwargs["session_id"],
+                CONFIG["MEMBER_ID1"],
+                self.settings["TIMEZONE"],
+                CONFIG["COST_TYPE_ID"],
+                court_ids,
+            )
+            self.logger.debug(f"Request body: {body}")
 
-    def parse_bookings(self, response):
-        reserve_date = self.settings.get("RESERVE_DATE")
+            return Request(
+                url=f"{BASE_URL}/Reservations/ReadExpanded/{CONFIG['ORG_ID']}",
+                method="POST",
+                headers=cb_kwargs["headers"],
+                body=f"jsonData={body}",
+                cb_kwargs=cb_kwargs,
+            )
 
-        json_response = json.loads(response.text)
-        print(
-            f'{json_response["Total"]} bookings found on {reserve_date.strftime("%A, %b %d")}'
-        )
+        # 3) Find open court
+        if path == "reservations/readexpanded":
+            json_response = json.loads(response.text)
+            self.logger.debug(f'Found {json_response["Total"]} existing reservations')
+
+            bookings = get_bookings_by_court(
+                json_response["Data"], self.settings["TIMEZONE"]
+            )
+            self.logger.debug(f"Summarized bookings: {bookings}")
+
+            # Get court and time preferences from settings
+            try:
+                preferences = get_day_preferences(
+                    self.settings["PREFERENCES"], cb_kwargs["booking_date"]
+                )
+                self.logger.debug(f"Day preferences: {preferences}")
+            except KeyError as err:
+                raise CloseSpider("Day preferences not found. Check settings.") from err
+
+            # Find open court
+            open_court = find_open_court(bookings, preferences)
+            if not open_court:
+                raise CloseSpider("Open court not found.")
+
+            cb_kwargs["open_court"] = open_court
+            court_id, start, end = open_court
+            court_label = self.settings["COURTS"][court_id]
+            self.logger.debug(
+                f"{court_label} is open "
+                f'from {start.strftime("%I:%M %p")} '
+                f'to {end.strftime("%I:%M %p")}'
+            )
+            return Request(
+                url=(
+                    f"{BASE_URL}/Reservations/CreateReservationCourtsview/"
+                    f"{CONFIG['ORG_ID']}?"
+                    f"start={start.strftime('%a %b %d %Y %H:%M:%S GMT%z (%Z)')}&"
+                    f"end={end.strftime('%a %b %d %Y %H:%M:%S GMT%z (%Z)')}&"
+                    f"courtLabel={quote(court_label)}&"
+                    f"customSchedulerId={cb_kwargs['session_id']}"
+                ),
+                method="GET",
+                headers=cb_kwargs["headers"],
+                cb_kwargs=cb_kwargs,
+            )
+
+        # 4) Reserve a court
+        if path == "reservations/createreservationcourtsview":
+            try:
+                token = response.css("#createReservation-Form input").attrib["value"]
+                self.logger.debug(f"Verification Token: {token}")
+            except KeyError as err:
+                raise CloseSpider("Unable to create reservation") from err
+
+            # Make request body string
+            court_id, start, end = cb_kwargs["open_court"]
+            body = get_create_booking_body(
+                session_id=cb_kwargs["session_id"],
+                token=token,
+                start_time=start,
+                court_id=court_id,
+                **CONFIG,
+            )
+            self.logger.debug(f"Request body: {body}")
+            return Request(
+                url=f"{BASE_URL}/Reservations/CreateReservation/{CONFIG['ORG_ID']}",
+                method="POST",
+                headers=cb_kwargs["headers"],
+                body=body,
+                cb_kwargs=cb_kwargs,
+            )
+
+        # 5) Confirm court reservation
+        if path == "reservations/createreservation":
+            json_response = json.loads(response.text)
+            self.logger.debug(f"Create reservation response: {json_response}")
+            try:
+                assert json_response["isValid"]
+            except AssertionError as err:
+                raise CloseSpider(
+                    f"Failed to create reservation: {json_response.get('message')}"
+                ) from err

@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 scrapy = "*"
+python-dateutil = "*"
+python-dotenv = "*"
 
 [dev-packages]
 black = "*"
@@ -17,4 +19,4 @@ python_version = "3.8"
 allow_prereleases = true
 
 [scripts]
-crawl = "python court_reserve/handler.py"
+start = "python court_reserve/runner.py settings.json"
