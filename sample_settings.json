@@ -1,0 +1,46 @@
+{
+    "LOG_LEVEL": "DEBUG",
+    "DAYS_OFFSET": 2,
+    "TIMEZONE": "America/Los_Angeles",
+    "PREFERENCES": {
+        "wednesday": {
+            "start_end_times": [
+                [
+                    "6:30 PM",
+                    "7:30 PM"
+                ],
+                [
+                    "7:00 PM",
+                    "8:00 PM"
+                ]
+            ],
+            "court_ids": [
+                "10001",
+                "10002",
+                "10003"
+            ]
+        },
+        "saturday": {
+            "start_end_times": [
+                [
+                    "12:00 PM",
+                    "1:00 PM"
+                ],
+                [
+                    "12:30 PM",
+                    "1:30 PM"
+                ]
+            ],
+            "court_ids": [
+                "10003",
+                "10001",
+                "10002"
+            ]
+        }
+    },
+    "COURTS": {
+        "10001": "Court #1",
+        "10002": "Court #2",
+        "10003": "Court #3"
+    }
+}
