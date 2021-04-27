@@ -162,11 +162,14 @@ class CourtReserveSpider(Spider):
 
         # 4) Reserve a court
         if path == "reservations/createreservationcourtsview":
-            token = response.css("#createReservation-Form input").attrib["value"]
-            self.logger.debug(f"Verification Token: {token}")
-            court_id, start, end = cb_kwargs["open_court"]
+            try:
+                token = response.css("#createReservation-Form input").attrib["value"]
+                self.logger.debug(f"Verification Token: {token}")
+            except KeyError as err:
+                raise CloseSpider("Unable to create reservation") from err
 
             # Make request body string
+            court_id, start, end = cb_kwargs["open_court"]
             body = get_create_booking_body(
                 session_id=cb_kwargs["session_id"],
                 token=token,
@@ -179,16 +182,17 @@ class CourtReserveSpider(Spider):
                 url=f"{BASE_URL}/Reservations/CreateReservation/{CONFIG['ORG_ID']}",
                 method="POST",
                 headers=cb_kwargs["headers"],
-                body=quote(body),
+                body=body,
                 cb_kwargs=cb_kwargs,
             )
 
         # 5) Confirm court reservation
         if path == "reservations/createreservation":
-            self.logger.debug(f"{response.text}")
-
-            # Failure
-            # 2021-04-26 23:58:15 [courtreserve] DEBUG: {"isValid":false,"isMessage":true,"message":"Please enter all required fields"}
-
-            # Success
-            # {"isValid":true
+            json_response = json.loads(response.text)
+            self.logger.debug(f"Create reservation response: {json_response}")
+            try:
+                assert json_response["isValid"]
+            except AssertionError as err:
+                raise CloseSpider(
+                    f"Failed to create reservation: {json_response.get('message')}"
+                ) from err
