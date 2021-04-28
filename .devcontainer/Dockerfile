@@ -21,4 +21,4 @@ RUN bash /tmp/library-scripts/aws-cli.sh "${USERNAME}" && rm -rf /tmp/library-sc
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
 # [Optional] install global node packages.
-RUN su vscode -c "source /usr/local/share/nvm/nvm.sh && npm install -g @aws-amplify/cli" 2>&1
+RUN su vscode -c "source /usr/local/share/nvm/nvm.sh && npm install -g aws-cdk" 2>&1
