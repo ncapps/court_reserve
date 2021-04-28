@@ -19,4 +19,4 @@ python_version = "3.8"
 allow_prereleases = true
 
 [scripts]
-start = "python court_reserve/runner.py settings.json"
+start = "python court_reserve/runner.py config.json"

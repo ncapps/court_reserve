@@ -39,7 +39,7 @@ class CourtReserveSpider(Spider):
         """
         cb_kwargs = {"login_attempts": 0}
         yield Request(
-            url=f"{BASE_URL}/Account/LogIn/{CONFIG['ORG_ID']}",
+            url=f"{BASE_URL}/Account/LogIn/{self.settings['ORG_ID']}",
             cb_kwargs=cb_kwargs,
         )
 
@@ -66,8 +66,8 @@ class CourtReserveSpider(Spider):
                     response,
                     formid="loginForm",
                     formdata={
-                        "UserNameOrEmail": CONFIG["USERNAME"],
-                        "Password": CONFIG["PASSWORD"],
+                        "UserNameOrEmail": self.settings["USERNAME"],
+                        "Password": self.settings["PASSWORD"],
                     },
                     clickdata={"type": "button", "onclick": "submitLoginForm()"},
                     cb_kwargs=cb_kwargs,
@@ -85,9 +85,9 @@ class CourtReserveSpider(Spider):
             self.logger.debug(f"Session id: {cb_kwargs['session_id']}")
 
             cb_kwargs["headers"] = get_http_headers(
-                CONFIG["ORG_ID"], cb_kwargs["session_id"]
+                self.settings["ORG_ID"], cb_kwargs["session_id"]
             )
-            self.logger.debug(f"Request headers: {cb_kwargs}")
+            self.logger.debug(f"Request headers: {cb_kwargs['headers']}")
 
             cb_kwargs["booking_date"] = get_booking_date(
                 int(self.settings["DAYS_OFFSET"]), self.settings["TIMEZONE"]
@@ -96,18 +96,18 @@ class CourtReserveSpider(Spider):
 
             court_ids = ",".join([str(x) for x in self.settings["COURTS"].keys()])
             body = get_bookings_body(
-                CONFIG["ORG_ID"],
+                self.settings["ORG_ID"],
                 cb_kwargs["booking_date"],
                 cb_kwargs["session_id"],
-                CONFIG["MEMBER_ID1"],
+                self.settings["MEMBER_ID1"],
                 self.settings["TIMEZONE"],
-                CONFIG["COST_TYPE_ID"],
+                self.settings["COST_TYPE_ID"],
                 court_ids,
             )
             self.logger.debug(f"Request body: {body}")
 
             return Request(
-                url=f"{BASE_URL}/Reservations/ReadExpanded/{CONFIG['ORG_ID']}",
+                url=f"{BASE_URL}/Reservations/ReadExpanded/{self.settings['ORG_ID']}",
                 method="POST",
                 headers=cb_kwargs["headers"],
                 body=f"jsonData={body}",
@@ -149,7 +149,7 @@ class CourtReserveSpider(Spider):
             return Request(
                 url=(
                     f"{BASE_URL}/Reservations/CreateReservationCourtsview/"
-                    f"{CONFIG['ORG_ID']}?"
+                    f"{self.settings['ORG_ID']}?"
                     f"start={start.strftime('%a %b %d %Y %H:%M:%S GMT%z (%Z)')}&"
                     f"end={end.strftime('%a %b %d %Y %H:%M:%S GMT%z (%Z)')}&"
                     f"courtLabel={quote(court_label)}&"
@@ -175,11 +175,14 @@ class CourtReserveSpider(Spider):
                 token=token,
                 start_time=start,
                 court_id=court_id,
-                **CONFIG,
+                **self.settings,
             )
             self.logger.debug(f"Request body: {body}")
+
+            if self.settings["DRYRUN"].lower() == "true":
+                raise CloseSpider("Dry run enabled: Skipping reservation creation")
             return Request(
-                url=f"{BASE_URL}/Reservations/CreateReservation/{CONFIG['ORG_ID']}",
+                url=f"{BASE_URL}/Reservations/CreateReservation/{self.settings['ORG_ID']}",
                 method="POST",
                 headers=cb_kwargs["headers"],
                 body=body,

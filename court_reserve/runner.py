@@ -17,15 +17,15 @@ def get_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "settings", metavar="settings", type=str, help="Settings string or file"
+        "config", metavar="config", type=str, help="Configuration string or file"
     )
 
     args = parser.parse_args()
-    if os.path.isfile(args.settings):
-        with open(args.settings) as input_file:
-            args.settings = json.load(input_file)
+    if os.path.isfile(args.config):
+        with open(args.config) as config_file:
+            args.config = json.load(config_file)
     else:
-        args.settings = json.load(io.StringIO(args.settings))
+        args.config = json.load(io.StringIO(args.config))
 
     return args
 
@@ -40,7 +40,7 @@ def main():
         None
     """
     args = get_args()
-    run_crawler(args.settings)
+    run_crawler(args.config)
 
 
 def run_crawler(settings):
