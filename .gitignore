@@ -142,3 +142,4 @@ cython_debug/
 
 tmp
 settings.json
+config.json
