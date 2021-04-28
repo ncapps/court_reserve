@@ -2,12 +2,11 @@
 """
 import re
 import json
-import os
 from urllib.parse import quote
 
 from scrapy import Spider, Request, FormRequest
 from scrapy.exceptions import CloseSpider
-from dotenv import dotenv_values
+
 from helpers import (
     get_http_headers,
     get_booking_date,
@@ -18,8 +17,6 @@ from helpers import (
     get_create_booking_body,
 )
 
-# override loaded values with environment variables
-CONFIG = {**dotenv_values(".env"), **os.environ}
 BASE_URL = "https://app.courtreserve.com/Online"
 
 
