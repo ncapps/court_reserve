@@ -12,7 +12,8 @@
 		}
 	},
 	"containerEnv": {
-		"AWS_PROFILE": "sandbox"
+		"AWS_PROFILE": "sandbox",
+		"ENVIRONMENT": "dev",
 	},
 	"mounts": [
 		"source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached",

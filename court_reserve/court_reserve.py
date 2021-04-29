@@ -39,9 +39,10 @@ def lambda_handler(event, context):
         else:
             print("Get secret from secrets manager")
             secret = json.loads(get_secret(CONFIG["SECRET_NAME"]))
-            # Cache secret in file
-            with filepath.open(mode="w") as secret_file:
-                json.dump(secret, secret_file)
+            if CONFIG.get("ENVIRONMENT").lower() == "dev":
+                # Cache secret in file
+                with filepath.open(mode="w") as secret_file:
+                    json.dump(secret, secret_file)
 
     except KeyError as err:
         raise err
