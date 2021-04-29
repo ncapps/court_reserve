@@ -6,7 +6,9 @@ SECRET_ID = court_reserve_secret
 DOWNLOADS_PATH = $(_PWD)/downloads
 SECRET_FILE = $(DOWNLOADS_PATH)/config.json
 
-$(shell mkdir -p $(DOWNLOADS_PATH))
+$(shell mkdir --parents $(DOWNLOADS_PATH))
+
+.PHONY: get-secret, update-secret, clean, deploy
 
 get-secret:
 	@echo "Downloading secret..."
@@ -20,5 +22,6 @@ clean:
 	@echo "Cleaning..."
 	@-rm -rf $(DOWNLOADS_PATH)
 
-$(DOWNLOADS_PATH):
-	mkdir -p $@
+deploy:
+	@echo "Deploying application..."
+	@pipenv lock --requirements > $(PWD)/court_reserve/requirements.txt
