@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
+pipenv install --dev
+
 cat << 'EOF' >> /home/vscode/.zshrc
 pipenv shell
-pipenv install --dev
 autoload bashcompinit && bashcompinit
 autoload -Uz compinit && compinit
 compinit
