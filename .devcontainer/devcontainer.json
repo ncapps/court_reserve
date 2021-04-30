@@ -15,6 +15,9 @@
 		"AWS_PROFILE": "sandbox",
 		"ENVIRONMENT": "dev",
 	},
+	"remoteEnv": {
+		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+	},
 	"mounts": [
 		"source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached",
 		"source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind",
@@ -39,7 +42,8 @@
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
 	"runArgs": [
-		"--init"
+		"--init",
+		"--privileged"
 	],
 	"overrideCommand": false
 }
