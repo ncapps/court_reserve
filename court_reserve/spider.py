@@ -176,7 +176,7 @@ class CourtReserveSpider(Spider):
             )
             self.logger.debug(f"Request body: {body}")
 
-            if self.settings["DRYRUN"].lower() == "true":
+            if self.settings["DRY_RUN"].lower() == "true":
                 raise CloseSpider("Dry run enabled: Skipping reservation creation")
             return Request(
                 url=f"{BASE_URL}/Reservations/CreateReservation/{self.settings['ORG_ID']}",
