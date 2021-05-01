@@ -27,20 +27,18 @@ def handler(event, context):
     Return:
         (dict)
     """
-    downloads_path = Path("downloads/")
-    downloads_path.mkdir(parents=True, exist_ok=True)
+    downloads_path = Path("tmp")
     filepath = downloads_path / CONFIG["SECRET_FILE"]
 
     try:
         if filepath.exists():
-            print("Loading secret from file")
             with filepath.open() as secret_file:
                 secret = json.load(secret_file)
         else:
-            print("Get secret from secrets manager")
-            secret = json.loads(get_secret(CONFIG["SECRET_NAME"]))
+            secret = json.loads(get_secret(CONFIG["SECRET_ID"]))
             if CONFIG.get("ENVIRONMENT").lower() == "dev":
                 # Cache secret in file
+                downloads_path.mkdir(parents=True, exist_ok=True)
                 with filepath.open(mode="w") as secret_file:
                     json.dump(secret, secret_file)
 
@@ -49,8 +47,6 @@ def handler(event, context):
     except ClientError as err:
         raise err
 
-    print(f"TYPE: {type(secret)}")
-    print(secret)
     process = CrawlerProcess(settings=secret)
     process.crawl(CourtReserveSpider)
     process.start()

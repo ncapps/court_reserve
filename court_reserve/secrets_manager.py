@@ -7,11 +7,11 @@ import boto3
 from botocore.exceptions import ClientError
 
 
-def get_secret(secret_name):
+def get_secret(secret_id):
     """Returns Secrets Manager secret
 
     Args:
-        secret_name (str): Name of the secret
+        secret_id (str): Secret id
 
     Returns:
         (str) Secret string
@@ -24,7 +24,7 @@ def get_secret(secret_name):
 
     # See https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
     try:
-        get_secret_value_response = client.get_secret_value(SecretId=secret_name)
+        get_secret_value_response = client.get_secret_value(SecretId=secret_id)
     except ClientError as err:
         if err.response["Error"]["Code"] == "DecryptionFailureException":
             # Secrets Manager can't decrypt the protected secret text using the provided KMS key.

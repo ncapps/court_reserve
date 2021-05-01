@@ -3,17 +3,10 @@ This project uses [Scrapy](https://docs.scrapy.org/en/latest/index.html) to make
 ## Getting started
 
 - An AWS Secrets Manager secret is required for application configuration
-```sh
-# Create .env file in project root directory
-cat << EOF > .env
-SECRET_NAME={Name of the secret}
-SECRET_FILE={Filename of secret when downloaded}
-EOF
-```
 
 - Run locally
 ```sh
-pipenv run start
+make run-local
 ```
 
 ## Deployment
