@@ -22,6 +22,11 @@ clean:
 	@echo "Cleaning..."
 	@-rm -rf $(DOWNLOADS_PATH)
 
-deploy:
-	@echo "Deploying application..."
+synth:
+	@echo "Synthesizng CloudFormation templates..."
 	@pipenv lock --requirements > $(PWD)/court_reserve/requirements.txt
+	@cdk synth
+
+deploy:
+	@echo "Deploying to the cloud!"
+	@cdk deploy

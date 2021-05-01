@@ -17,7 +17,7 @@ from secrets_manager import get_secret
 CONFIG = {**dotenv_values(".env"), **os.environ}
 
 
-def lambda_handler(event, context):
+def handler(event, context):
     """Reserve a tennis court
 
     Args:
@@ -58,7 +58,7 @@ def lambda_handler(event, context):
 
 def main():
     """Use for local execution"""
-    lambda_handler({}, {})
+    handler({}, {})
 
 
 if __name__ == "__main__":
