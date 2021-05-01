@@ -11,6 +11,12 @@ python-dotenv = "*"
 [dev-packages]
 black = "*"
 pylint = "*"
+boto3 = "*"
+"aws-cdk.core" = "*"
+"aws-cdk.aws-lambda" = "*"
+"aws-cdk.aws-events" = "*" 
+"aws-cdk.aws-events-targets" = "*"
+"aws-cdk.aws-secretsmanager" = "*"
 
 [requires]
 python_version = "3.8"
@@ -19,4 +25,4 @@ python_version = "3.8"
 allow_prereleases = true
 
 [scripts]
-start = "python court_reserve/runner.py settings.json"
+start = "python court_reserve/court_reserve.py"

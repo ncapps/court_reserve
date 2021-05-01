@@ -1,4 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-echo "pipenv shell" >> /home/vscode/.zshrc
-echo "pipenv install --dev" >> /home/vscode/.zshrc
+pipenv install --dev
+
+cat << 'EOF' >> /home/vscode/.zshrc
+pipenv shell
+autoload bashcompinit && bashcompinit
+autoload -Uz compinit && compinit
+compinit
+complete -C '/usr/local/bin/aws_completer' aws
+EOF

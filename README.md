@@ -2,21 +2,24 @@
 This project uses [Scrapy](https://docs.scrapy.org/en/latest/index.html) to make tennis court reservations.
 ## Getting started
 
-- Create required environment variables
+- An AWS Secrets Manager secret is required for application configuration
+
+- Run locally
 ```sh
-# Create .env file in project root directory
-cat << EOF > .env
-ORG_ID={Organization Id}
-USERNAME={Login username}
-PASSWORD={Login password}
-MEMBER_ID1={Member Id}
-MEMBER_ID2={Member Id}
-EOF
+make run-local
 ```
 
-- Configure settings
+## Deployment
+AWS resources are defined and deployed using [AWS Cloud Development Kit (CDK)](https://docs.aws.amazon.com/cdk/latest/guide/cli.html)
 
-- Execute locally
+- Helpful commands
 ```sh
-pipenv run start
+# Synthesizes CloudFormation template
+make synth
+
+# Deploys CloudFormation stack
+cdk deploy
+
+# Compares the deployed stack with the synthesized template
+cdk diff
 ```

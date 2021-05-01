@@ -7,10 +7,21 @@
 			// Update 'VARIANT' to pick a Python version: 3, 3.6, 3.7, 3.8, 3.9
 			"VARIANT": "3.8",
 			// Options
-			"INSTALL_NODE": "false",
+			"INSTALL_NODE": "true",
 			"NODE_VERSION": "lts/*"
 		}
 	},
+	"containerEnv": {
+		"AWS_PROFILE": "sandbox",
+		"ENVIRONMENT": "dev",
+	},
+	"remoteEnv": {
+		"LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+	},
+	"mounts": [
+		"source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached",
+		"source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind",
+	],
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
 		"terminal.integrated.shell.linux": "/bin/zsh",
@@ -29,5 +40,10 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "./scripts/postCreateCommand.sh",
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "vscode"
+	"remoteUser": "vscode",
+	"runArgs": [
+		"--init",
+		"--privileged"
+	],
+	"overrideCommand": false
 }

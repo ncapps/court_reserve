@@ -141,4 +141,5 @@ cython_debug/
 .vscode
 
 tmp
-settings.json
+*/requirements.txt
+cdk.out/
