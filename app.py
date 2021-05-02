@@ -7,6 +7,7 @@ from aws_cdk import (
     aws_events as events,
     aws_events_targets as targets,
     aws_secretsmanager as secretsmanager,
+    aws_logs as logs,
     core as cdk,
 )
 
@@ -22,6 +23,7 @@ class LambdaStack(cdk.Stack):
         lambda_fn = lambda_.Function(
             self,
             "Function",
+            description="Reserves a tennis court",
             code=lambda_.Code.from_asset(
                 path=str(Path("court_reserve").resolve()),
                 bundling=cdk.BundlingOptions(
@@ -42,6 +44,7 @@ class LambdaStack(cdk.Stack):
             handler="court_reserve.handler",
             memory_size=512,
             timeout=cdk.Duration.seconds(30),
+            log_retention=logs.RetentionDays.TWO_WEEKS,
         )
 
         # Run every day at 9AM PDT (UTC -7)
