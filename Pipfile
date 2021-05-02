@@ -17,6 +17,7 @@ boto3 = "*"
 "aws-cdk.aws-events" = "*" 
 "aws-cdk.aws-events-targets" = "*"
 "aws-cdk.aws-secretsmanager" = "*"
+"aws-cdk.aws-logs" = "*"
 
 [requires]
 python_version = "3.8"

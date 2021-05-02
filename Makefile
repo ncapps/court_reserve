@@ -27,6 +27,7 @@ run-local:
 
 clean:
 	@echo "Cleaning..."
+	@-rm -r $(_PWD)/court_reserve/requirements.txt
 	@-rm -rf $(DOWNLOADS_PATH)
 
 synth:
