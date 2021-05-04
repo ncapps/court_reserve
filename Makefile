@@ -1,40 +1,64 @@
-.PHONY: get-secret update-secret
+# https://tech.davis-hansson.com/p/make/
+SHELL := bash
+.ONESHELL:
+.SHELLFLAGS := -eu -o pipefail -c 
+.DELETE_ON_ERROR:
+MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules
 
-_PWD = $(shell pwd)
-_MKDIR = $(shell mkdir -p)
-SECRET_ID = court_reserve_secret
-DOWNLOADS_PATH = $(_PWD)/tmp
-SECRET_FILE = config.json
-SECRET_PATH = $(DOWNLOADS_PATH)/$(SECRET_FILE)
+ifeq ($(origin .RECIPEPREFIX), undefined)
+  $(error This Make does not support .RECIPEPREFIX. Please use GNU Make 4.0 or later)
+endif
+.RECIPEPREFIX = >
 
-export SECRET_ID
-export SECRET_FILE
 
-$(shell mkdir --parents $(DOWNLOADS_PATH))
+SECRET_ID ?= court_reserve_secret
 
-.PHONY: get-secret, update-secret, clean, deploy
-
-get-secret:
-	@echo "Downloading secret..."
-	@aws secretsmanager get-secret-value --secret-id $(SECRET_ID) | jq -r .SecretString > $(SECRET_PATH)
-
-update-secret:
-	@echo "Updating secret in Secrets Manager"
-	@aws secretsmanager update-secret --secret-id $(SECRET_ID) --secret-string file://$(SECRET_PATH)
-
-run-local:
-	python court_reserve/court_reserve.py
+# Default - top level rule is what gets run when you just `make`
+build:
+> @echo "Building..."
+.PHONY: build
 
 clean:
-	@echo "Cleaning..."
-	@-rm -r $(_PWD)/court_reserve/requirements.txt
-	@-rm -rf $(DOWNLOADS_PATH)
+> @echo "Cleaning..."
+> rm -rf tmp
+> rm -rf cdk.out
+> rm -f court_reserve/requirements.txt
+> rm -f template.yaml
+.PHONY: clean
+
+tmp/secret.json:
+> mkdir -p $(@D)
+> touch $@
+
+tmp/.get-secret.sentinel: tmp/secret.json
+> aws secretsmanager get-secret-value --secret-id $(SECRET_ID) | jq -r .SecretString > $<
+> touch $@
+
+tmp/.update-secret.sentinel: tmp/secret.json
+> aws secretsmanager update-secret --secret-id $(SECRET_ID) --secret-string file://$<
+> touch $@
+
+get-secret: tmp/.get-secret.sentinel
+.PHONY: get-secret
+
+update-secret: tmp/.update-secret.sentinel
+.PHONY: update-secret
+
+local-invoke: tmp/template.yaml
+> @echo "Running cron lambda locally..."
+> function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' /tmp/template.yaml)
+> @sam local invoke "$${function_name}" --no-event
+.PHONY: local-invoke
+
+tmp/template.yaml: $(shell find court_reserve -type f) app.py
+> @mkdir -p $(@D)
+> @pipenv lock --requirements > $(_PWD)/court_reserve/requirements.txt
+> @cdk synth --no-staging > tmp/template.yaml 
+	
 
 synth:
-	@echo "Synthesizng CloudFormation templates..."
-	@pipenv lock --requirements > $(PWD)/court_reserve/requirements.txt
-	@cdk synth
-
-deploy:
-	@echo "Deploying to the cloud!"
-	@cdk deploy
+> @echo "Synthesizng CloudFormation templates..."
+> @pipenv lock --requirements > $(PWD)/court_reserve/requirements.txt
+> @cdk synth
+.PHONY: synth
