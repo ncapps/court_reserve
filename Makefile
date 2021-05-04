@@ -66,6 +66,6 @@ local-invoke: tmp/template.yaml
 > sam local invoke "$${function_name}" --no-event --template-file $<
 .PHONY: local-invoke
 
-synth: court_reserve/requirements.txt .env app.py $(shell find court_reserve -type f)
+synth: court_reserve/requirements.txt .env app.py
 > cdk synth
 .PHONY: synth
