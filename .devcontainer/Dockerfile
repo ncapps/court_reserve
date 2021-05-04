@@ -12,9 +12,9 @@ COPY .devcontainer/library-scripts/docker-in-docker-debian.sh /tmp/library-scrip
 RUN apt-get update && bash /tmp/library-scripts/docker-in-docker-debian.sh \
     && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/* /tmp/library-scripts
 
-# Install aws cli
-COPY .devcontainer/library-scripts/aws-cli.sh /tmp/library-scripts/
-RUN bash /tmp/library-scripts/aws-cli.sh "${USERNAME}" && rm -rf /tmp/library-scripts
+# Install cli tools
+COPY .devcontainer/library-scripts/utils.sh /tmp/library-scripts/
+RUN bash /tmp/library-scripts/utils.sh "${USERNAME}" && rm -rf /tmp/library-scripts
 
 # [Optional] If your pip requirements rarely change, uncomment this section to add them to the image.
 # COPY requirements.txt /tmp/pip-tmp/

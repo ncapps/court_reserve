@@ -43,3 +43,9 @@ curl -sSL -o $AWS_SAM_PATH/awssamcli.zip "https://github.com/aws/aws-sam-cli/rel
 unzip awssamcli.zip -d sam-installation
 ./sam-installation/install
 rm -rf $AWS_SAM_PATH
+
+# Install yq
+mkdir -p /tmp/yq
+cd /tmp/yq
+wget https://github.com/mikefarah/yq/releases/download/v4.7.1/yq_linux_amd64.tar.gz -O - | tar xz && mv yq_linux_amd64 /usr/bin/yq
+rm -rf /tmp/yq
