@@ -11,7 +11,9 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 .RECIPEPREFIX = >
 
-
+DRY_RUN ?= false
+DAYS_OFFSET ?= 3
+LOG_LEVEL ?= DEBUG
 SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`
@@ -49,11 +51,11 @@ court_reserve/requirements.txt: Pipfile.lock
 > pipenv lock --requirements > $@
 
 .env: Makefile
-> @echo "DRY_RUN=true" > $@
-> @echo "DAYS_OFFSET=3" >> $@
-> @echo "LOG_LEVEL=DEBUG" >> $@
-> @echo "LOCAL_TIMEZONE=America/Los_Angeles" >> $@
-> @echo "SECRET_ID=court_reserve_secret" >> $@
+> @echo DRY_RUN=$(DRY_RUN) > $@
+> @echo DAYS_OFFSET=$(DAYS_OFFSET) >> $@
+> @echo LOG_LEVEL=$(LOG_LEVEL) >> $@
+> @echo SECRET_ID=$(SECRET_ID) >> $@
+> @echo LOCAL_TIMEZONE=America/Los_Angeles >> $@
 
 tmp/template.yaml: court_reserve/requirements.txt .env app.py $(shell find court_reserve -type f)
 > mkdir -p $(@D)
@@ -64,6 +66,6 @@ local-invoke: tmp/template.yaml
 > sam local invoke "$${function_name}" --no-event --template-file $<
 .PHONY: local-invoke
 
-synth: court_reserve/requirements.txt app.py $(shell find court_reserve -type f)
+synth: court_reserve/requirements.txt .env app.py $(shell find court_reserve -type f)
 > cdk synth
 .PHONY: synth
