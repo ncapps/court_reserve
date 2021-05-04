@@ -24,7 +24,7 @@ clean:
 > rm -rf tmp
 > rm -rf cdk.out
 > rm -f court_reserve/requirements.txt
-> rm -f template.yaml
+> rm -f .env
 .PHONY: clean
 
 tmp/secret.json:
@@ -48,12 +48,19 @@ update-secret: tmp/.update-secret.sentinel
 court_reserve/requirements.txt: Pipfile.lock
 > pipenv lock --requirements > $@
 
-tmp/template.yaml: court_reserve/requirements.txt app.py $(shell find court_reserve -type f)
+.env: Makefile
+> @echo "DRY_RUN=true" > $@
+> @echo "DAYS_OFFSET=3" >> $@
+> @echo "LOG_LEVEL=DEBUG" >> $@
+> @echo "LOCAL_TIMEZONE=America/Los_Angeles" >> $@
+> @echo "SECRET_ID=court_reserve_secret" >> $@
+
+tmp/template.yaml: court_reserve/requirements.txt .env app.py $(shell find court_reserve -type f)
 > mkdir -p $(@D)
 > cdk synth --no-staging > $@
 
 local-invoke: tmp/template.yaml
-> function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $@)
+> function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $<)
 > sam local invoke "$${function_name}" --no-event --template-file $<
 .PHONY: local-invoke
 

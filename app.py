@@ -10,8 +10,9 @@ from aws_cdk import (
     aws_logs as logs,
     core as cdk,
 )
+from dotenv import dotenv_values
 
-SECRET_ID = "court_reserve_secret"
+CONFIG = {**dotenv_values(".env")}
 
 
 class LambdaStack(cdk.Stack):
@@ -20,9 +21,10 @@ class LambdaStack(cdk.Stack):
     def __init__(self, scope, id_, **kwargs):
         super().__init__(scope, id_, **kwargs)
 
+        # https://docs.aws.amazon.com/cdk/api/latest/python/aws_cdk.aws_lambda/Function.html
         lambda_fn = lambda_.Function(
             self,
-            "Function",
+            "CronFunction",
             description="Reserves a tennis court",
             code=lambda_.Code.from_asset(
                 path=str(Path("court_reserve").resolve()),
@@ -35,11 +37,7 @@ class LambdaStack(cdk.Stack):
                     ],
                 ),
             ),
-            environment={
-                "SECRET_ID": SECRET_ID,
-                "SECRET_FILE": "config.json",
-                "ENVIRONMENT": "prod",
-            },
+            environment={**CONFIG},
             runtime=lambda_.Runtime.PYTHON_3_8,
             handler="court_reserve.handler",
             memory_size=512,
@@ -57,9 +55,11 @@ class LambdaStack(cdk.Stack):
 
         # Grant read access to secret
         secret = secretsmanager.Secret.from_secret_name_v2(
-            self, "SecretFromName", SECRET_ID
+            self, "SecretFromName", CONFIG["SECRET_ID"]
         )
         secret.grant_read(lambda_fn)
+
+        self.export_value(lambda_fn.function_name, name="lambdaCronFunctionName")
 
 
 app = cdk.App()

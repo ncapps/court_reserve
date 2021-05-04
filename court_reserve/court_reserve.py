@@ -2,10 +2,9 @@
 """ CourtReserveSpider runner
 """
 import json
-from pathlib import Path
 import os
+from copy import deepcopy
 
-from dotenv import dotenv_values
 from scrapy.crawler import CrawlerProcess
 from botocore.exceptions import ClientError
 
@@ -13,8 +12,8 @@ from spider import CourtReserveSpider
 from secrets_manager import get_secret
 
 
-# override loaded values with environment variables
-CONFIG = {**dotenv_values(".env"), **os.environ}
+# Load environment variables
+CONFIG = {**os.environ}
 
 
 def handler(event, context):
@@ -27,27 +26,19 @@ def handler(event, context):
     Return:
         (dict)
     """
-    downloads_path = Path("tmp")
-    filepath = downloads_path / CONFIG["SECRET_FILE"]
 
+    # Get secret from secrets manager
     try:
-        if filepath.exists():
-            with filepath.open() as secret_file:
-                secret = json.load(secret_file)
-        else:
-            secret = json.loads(get_secret(CONFIG["SECRET_ID"]))
-            if CONFIG.get("ENVIRONMENT").lower() == "dev":
-                # Cache secret in file
-                downloads_path.mkdir(parents=True, exist_ok=True)
-                with filepath.open(mode="w") as secret_file:
-                    json.dump(secret, secret_file)
-
-    except KeyError as err:
-        raise err
+        secret = json.loads(get_secret(CONFIG["SECRET_ID"]))
     except ClientError as err:
         raise err
 
-    process = CrawlerProcess(settings=secret)
+    # Add environment variables to spider settings
+    settings = deepcopy(secret)
+    for key in ["DRY_RUN", "DAYS_OFFSET", "LOG_LEVEL", "LOCAL_TIMEZONE"]:
+        settings[key] = CONFIG[key]
+
+    process = CrawlerProcess(settings=settings)
     process.crawl(CourtReserveSpider)
     process.start()
 
