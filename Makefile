@@ -45,20 +45,18 @@ get-secret: tmp/.get-secret.sentinel
 update-secret: tmp/.update-secret.sentinel
 .PHONY: update-secret
 
+court_reserve/requirements.txt: Pipfile.lock
+> pipenv lock --requirements > $@
+
+tmp/template.yaml: court_reserve/requirements.txt app.py $(shell find court_reserve -type f)
+> mkdir -p $(@D)
+> cdk synth --no-staging > $@
+
 local-invoke: tmp/template.yaml
-> @echo "Running cron lambda locally..."
-> function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' /tmp/template.yaml)
-> @sam local invoke "$${function_name}" --no-event
+> function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $@)
+> sam local invoke "$${function_name}" --no-event --template-file $<
 .PHONY: local-invoke
 
-tmp/template.yaml: $(shell find court_reserve -type f) app.py
-> @mkdir -p $(@D)
-> @pipenv lock --requirements > $(_PWD)/court_reserve/requirements.txt
-> @cdk synth --no-staging > tmp/template.yaml 
-	
-
-synth:
-> @echo "Synthesizng CloudFormation templates..."
-> @pipenv lock --requirements > $(PWD)/court_reserve/requirements.txt
-> @cdk synth
+synth: court_reserve/requirements.txt app.py $(shell find court_reserve -type f)
+> cdk synth
 .PHONY: synth
