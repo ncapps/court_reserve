@@ -17,8 +17,8 @@ SECRET_ID = "court_reserve_secret"
 class LambdaStack(cdk.Stack):
     """Lambda cron to reserve court time"""
 
-    def __init__(self, app_, id_):
-        super().__init__(app_, id_)
+    def __init__(self, scope, id_, **kwargs):
+        super().__init__(scope, id_, **kwargs)
 
         lambda_fn = lambda_.Function(
             self,
