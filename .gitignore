@@ -142,3 +142,4 @@ cython_debug/
 
 tmp
 cdk.out/
+requirements_lock.txt

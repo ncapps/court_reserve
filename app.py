@@ -33,7 +33,7 @@ class LambdaStack(cdk.Stack):
                     command=[
                         "bash",
                         "-c",
-                        "pip install -r requirements.txt -t /asset-output && cp -au . /asset-output",
+                        "pip install -r requirements_lock.txt -t /asset-output && cp -au . /asset-output",
                     ],
                 ),
             ),

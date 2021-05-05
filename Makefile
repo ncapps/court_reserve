@@ -17,7 +17,7 @@ LOG_LEVEL ?= DEBUG
 SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`
-build: court_reserve/requirements.txt .env app.py
+build: court_reserve/requirements_lock.txt .env app.py
 > cdk synth
 .PHONY: build
 
@@ -25,7 +25,7 @@ clean:
 > @echo "Cleaning..."
 > rm -rf tmp
 > rm -rf cdk.out
-> rm -f court_reserve/requirements.txt
+> rm -f court_reserve/requirements_lock.txt
 > rm -f .env
 .PHONY: clean
 
@@ -47,8 +47,8 @@ get-secret: tmp/.get-secret.sentinel
 update-secret: tmp/.update-secret.sentinel
 .PHONY: update-secret
 
-court_reserve/requirements.txt: Pipfile.lock
-> pipenv lock --requirements > $@
+court_reserve/requirements_lock.txt: court_reserve/requirements.txt
+> pip freeze > $@
 
 .env: Makefile
 > @echo DRY_RUN=$(DRY_RUN) > $@
@@ -57,7 +57,7 @@ court_reserve/requirements.txt: Pipfile.lock
 > @echo SECRET_ID=$(SECRET_ID) >> $@
 > @echo LOCAL_TIMEZONE=America/Los_Angeles >> $@
 
-tmp/template.yaml: court_reserve/requirements.txt .env app.py $(shell find court_reserve -type f)
+tmp/template.yaml: court_reserve/requirements_lock.txt .env app.py $(shell find court_reserve -type f)
 > mkdir -p $(@D)
 > cdk synth --no-staging > $@
 
