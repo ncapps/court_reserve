@@ -30,7 +30,7 @@ clean:
 .PHONY: clean
 
 tmp/secret.json:
-> mkdir -p $(@D)
+> mkdir --parents $(@D)
 > touch $@
 
 tmp/.get-secret.sentinel: tmp/secret.json
@@ -47,8 +47,9 @@ get-secret: tmp/.get-secret.sentinel
 update-secret: tmp/.update-secret.sentinel
 .PHONY: update-secret
 
+# Freeze only requirements in requirement.txt
 court_reserve/requirements_lock.txt: court_reserve/requirements.txt
-> pip freeze > $@
+> pip freeze --requirement $< | grep --before-context=200 "pip freeze" | grep --invert-match "pip freeze" > $@
 
 .env: Makefile
 > @echo DRY_RUN=$(DRY_RUN) > $@
@@ -58,7 +59,7 @@ court_reserve/requirements_lock.txt: court_reserve/requirements.txt
 > @echo LOCAL_TIMEZONE=America/Los_Angeles >> $@
 
 tmp/template.yaml: court_reserve/requirements_lock.txt .env app.py $(shell find court_reserve -type f)
-> mkdir -p $(@D)
+> mkdir --parents $(@D)
 > cdk synth --no-staging > $@
 
 local-invoke: tmp/template.yaml
