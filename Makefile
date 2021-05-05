@@ -1,40 +1,67 @@
-.PHONY: get-secret update-secret
+# https://tech.davis-hansson.com/p/make/
+SHELL := bash
+.ONESHELL:
+.SHELLFLAGS := -eu -o pipefail -c 
+.DELETE_ON_ERROR:
+MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules
 
-_PWD = $(shell pwd)
-_MKDIR = $(shell mkdir -p)
-SECRET_ID = court_reserve_secret
-DOWNLOADS_PATH = $(_PWD)/tmp
-SECRET_FILE = config.json
-SECRET_PATH = $(DOWNLOADS_PATH)/$(SECRET_FILE)
+ifeq ($(origin .RECIPEPREFIX), undefined)
+  $(error This Make does not support .RECIPEPREFIX. Please use GNU Make 4.0 or later)
+endif
+.RECIPEPREFIX = >
 
-export SECRET_ID
-export SECRET_FILE
+DRY_RUN ?= false
+DAYS_OFFSET ?= 3
+LOG_LEVEL ?= DEBUG
+SECRET_ID ?= court_reserve_secret
 
-$(shell mkdir --parents $(DOWNLOADS_PATH))
-
-.PHONY: get-secret, update-secret, clean, deploy
-
-get-secret:
-	@echo "Downloading secret..."
-	@aws secretsmanager get-secret-value --secret-id $(SECRET_ID) | jq -r .SecretString > $(SECRET_PATH)
-
-update-secret:
-	@echo "Updating secret in Secrets Manager"
-	@aws secretsmanager update-secret --secret-id $(SECRET_ID) --secret-string file://$(SECRET_PATH)
-
-run-local:
-	python court_reserve/court_reserve.py
+# Default - top level rule is what gets run when you just `make`
+build: court_reserve/requirements.txt .env app.py
+> cdk synth
+.PHONY: build
 
 clean:
-	@echo "Cleaning..."
-	@-rm -r $(_PWD)/court_reserve/requirements.txt
-	@-rm -rf $(DOWNLOADS_PATH)
+> @echo "Cleaning..."
+> rm -rf tmp
+> rm -rf cdk.out
+> rm -f court_reserve/requirements.txt
+> rm -f .env
+.PHONY: clean
 
-synth:
-	@echo "Synthesizng CloudFormation templates..."
-	@pipenv lock --requirements > $(PWD)/court_reserve/requirements.txt
-	@cdk synth
+tmp/secret.json:
+> mkdir -p $(@D)
+> touch $@
 
-deploy:
-	@echo "Deploying to the cloud!"
-	@cdk deploy
+tmp/.get-secret.sentinel: tmp/secret.json
+> aws secretsmanager get-secret-value --secret-id $(SECRET_ID) | jq -r .SecretString > $<
+> touch $@
+
+tmp/.update-secret.sentinel: tmp/secret.json
+> aws secretsmanager update-secret --secret-id $(SECRET_ID) --secret-string file://$<
+> touch $@
+
+get-secret: tmp/.get-secret.sentinel
+.PHONY: get-secret
+
+update-secret: tmp/.update-secret.sentinel
+.PHONY: update-secret
+
+court_reserve/requirements.txt: Pipfile.lock
+> pipenv lock --requirements > $@
+
+.env: Makefile
+> @echo DRY_RUN=$(DRY_RUN) > $@
+> @echo DAYS_OFFSET=$(DAYS_OFFSET) >> $@
+> @echo LOG_LEVEL=$(LOG_LEVEL) >> $@
+> @echo SECRET_ID=$(SECRET_ID) >> $@
+> @echo LOCAL_TIMEZONE=America/Los_Angeles >> $@
+
+tmp/template.yaml: court_reserve/requirements.txt .env app.py $(shell find court_reserve -type f)
+> mkdir -p $(@D)
+> cdk synth --no-staging > $@
+
+local-invoke: tmp/template.yaml
+> function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $<)
+> sam local invoke "$${function_name}" --no-event --template-file $<
+.PHONY: local-invoke
