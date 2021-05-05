@@ -87,7 +87,7 @@ class CourtReserveSpider(Spider):
             self.logger.debug(f"Request headers: {cb_kwargs['headers']}")
 
             cb_kwargs["booking_date"] = get_booking_date(
-                int(self.settings["DAYS_OFFSET"]), self.settings["TIMEZONE"]
+                int(self.settings["DAYS_OFFSET"]), self.settings["LOCAL_TIMEZONE"]
             )
             self.logger.debug(f"Booking date: {cb_kwargs['booking_date']}")
 
@@ -97,7 +97,7 @@ class CourtReserveSpider(Spider):
                 cb_kwargs["booking_date"],
                 cb_kwargs["session_id"],
                 self.settings["MEMBER_ID1"],
-                self.settings["TIMEZONE"],
+                self.settings["LOCAL_TIMEZONE"],
                 self.settings["COST_TYPE_ID"],
                 court_ids,
             )
@@ -117,7 +117,7 @@ class CourtReserveSpider(Spider):
             self.logger.debug(f'Found {json_response["Total"]} existing reservations')
 
             bookings = get_bookings_by_court(
-                json_response["Data"], self.settings["TIMEZONE"]
+                json_response["Data"], self.settings["LOCAL_TIMEZONE"]
             )
             self.logger.debug(f"Summarized bookings: {bookings}")
 

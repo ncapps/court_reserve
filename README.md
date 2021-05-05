@@ -6,7 +6,7 @@ This project uses [Scrapy](https://docs.scrapy.org/en/latest/index.html) to make
 
 - Run locally
 ```sh
-make run-local
+DRY_RUN=true make local-invoke
 ```
 
 ## Deployment
@@ -15,11 +15,11 @@ AWS resources are defined and deployed using [AWS Cloud Development Kit (CDK)](h
 - Helpful commands
 ```sh
 # Synthesizes CloudFormation template
-make synth
-
-# Deploys CloudFormation stack
-cdk deploy
+make build
 
 # Compares the deployed stack with the synthesized template
 cdk diff
+
+# Deploys CloudFormation stack
+cdk deploy
 ```

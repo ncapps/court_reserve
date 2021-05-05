@@ -27,10 +27,25 @@ elif [ "${USERNAME}" = "none" ] || ! id -u ${USERNAME} > /dev/null 2>&1; then
     USERNAME=root
 fi
 
-# Download and build from src
+# Download and install AWS CLI
 mkdir -p /tmp/aws-cli
 cd /tmp/aws-cli
 curl -sSl -o /tmp/aws-cli/awscliv2.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip"
 unzip awscliv2.zip
 ./aws/install
 rm -rf /tmp/aws-cli
+
+# Download and install AWS SAM CLI
+AWS_SAM_PATH=/tmp/aws-sam-cli
+mkdir -p $AWS_SAM_PATH
+cd $AWS_SAM_PATH
+curl -sSL -o $AWS_SAM_PATH/awssamcli.zip "https://github.com/aws/aws-sam-cli/releases/download/v1.23.0/aws-sam-cli-linux-x86_64.zip"
+unzip awssamcli.zip -d sam-installation
+./sam-installation/install
+rm -rf $AWS_SAM_PATH
+
+# Install yq
+mkdir -p /tmp/yq
+cd /tmp/yq
+wget https://github.com/mikefarah/yq/releases/download/v4.7.1/yq_linux_amd64.tar.gz -O - | tar xz && mv yq_linux_amd64 /usr/bin/yq
+rm -rf /tmp/yq
