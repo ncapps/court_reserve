@@ -32,7 +32,7 @@ clean:
 
 synth:
 	@echo "Synthesizng CloudFormation templates..."
-	@pipenv lock --requirements > $(PWD)/court_reserve/requirements.txt
+	
 	@cdk synth
 
 deploy:

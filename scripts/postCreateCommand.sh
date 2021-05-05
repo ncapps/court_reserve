@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 
-pipenv install --dev
+WORKSPACE = /workspaces/court_reserve
+
+python -m venv $WORKSPACE/venv
+source $WORKSPACE/venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r $WORKSPACE/requirements-dev.txt \
+    -r $WORKSPACE/court_reserve/requirements.txt
 
 cat << 'EOF' >> /home/vscode/.zshrc
-pipenv shell
+source $(WORKSPACE)/venv/bin/activate
+
 autoload bashcompinit && bashcompinit
 autoload -Uz compinit && compinit
 compinit

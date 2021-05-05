@@ -18,6 +18,8 @@ boto3 = "*"
 "aws-cdk.aws-events-targets" = "*"
 "aws-cdk.aws-secretsmanager" = "*"
 "aws-cdk.aws-logs" = "*"
+"aws-cdk.pipelines" = "*"
+"aws-cdk.aws-codebuild" = "*"
 
 [requires]
 python_version = "3.8"
