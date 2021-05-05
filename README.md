@@ -15,7 +15,7 @@ AWS resources are defined and deployed using [AWS Cloud Development Kit (CDK)](h
 - Helpful commands
 ```sh
 # Synthesizes CloudFormation template
-make synth
+make build
 
 # Compares the deployed stack with the synthesized template
 cdk diff

@@ -17,8 +17,8 @@ LOG_LEVEL ?= DEBUG
 SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`
-build:
-> @echo "Building..."
+build: court_reserve/requirements.txt .env app.py
+> cdk synth
 .PHONY: build
 
 clean:
@@ -65,7 +65,3 @@ local-invoke: tmp/template.yaml
 > function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $<)
 > sam local invoke "$${function_name}" --no-event --template-file $<
 .PHONY: local-invoke
-
-synth: court_reserve/requirements.txt .env app.py
-> cdk synth
-.PHONY: synth
