@@ -1,5 +1,8 @@
 """ Build AWS cloud resources
 """
+#!/usr/bin/env python3
+
+import os
 from pathlib import Path
 
 from aws_cdk import (
@@ -11,6 +14,7 @@ from aws_cdk import (
     core as cdk,
 )
 from dotenv import dotenv_values
+from pipeline import CourtSchedulerPipelineStack
 
 CONFIG = {**dotenv_values(".env")}
 
@@ -24,7 +28,7 @@ class LambdaStack(cdk.Stack):
         # https://docs.aws.amazon.com/cdk/api/latest/python/aws_cdk.aws_lambda/Function.html
         lambda_fn = lambda_.Function(
             self,
-            "CronFunction",
+            "Function",
             description="Reserves a tennis court",
             code=lambda_.Code.from_asset(
                 path=str(Path("court_reserve").resolve()),
@@ -63,5 +67,14 @@ class LambdaStack(cdk.Stack):
 
 
 app = cdk.App()
-LambdaStack(app, "LambdaStack")
+LambdaStack(app, "CourtSchedulerLambdaStack")
+CourtSchedulerPipelineStack(
+    app,
+    "CourtSchedulerPipeline",
+    # https://docs.aws.amazon.com/cdk/latest/guide/environments.html
+    env=cdk.Environment(
+        account=os.environ.get("CDK_DEPLOY_ACCOUNT", os.environ["CDK_DEFAULT_ACCOUNT"]),
+        region=os.environ.get("CDK_DEPLOY_REGION", os.environ["CDK_DEFAULT_REGION"]),
+    ),
+)
 app.synth()
