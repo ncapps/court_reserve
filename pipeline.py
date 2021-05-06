@@ -29,6 +29,7 @@ class CourtSchedulerPipelineStack(Stack):
                 trigger=codepipeline_actions.GitHubTrigger.POLL,
                 owner="ncapps",
                 repo="court_reserve",
+                branch="feature/pipeline",
             ),
             synth_action=SimpleSynthAction(
                 synth_command="make build",

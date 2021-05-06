@@ -67,14 +67,12 @@ class LambdaStack(cdk.Stack):
 
 
 app = cdk.App()
-LambdaStack(app, "CourtSchedulerLambdaStack")
-CourtSchedulerPipelineStack(
-    app,
-    "CourtSchedulerPipeline",
-    # https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    env=cdk.Environment(
-        account=os.environ.get("CDK_DEPLOY_ACCOUNT", os.environ["CDK_DEFAULT_ACCOUNT"]),
-        region=os.environ.get("CDK_DEPLOY_REGION", os.environ["CDK_DEFAULT_REGION"]),
-    ),
+# https://docs.aws.amazon.com/cdk/latest/guide/environments.html
+env = cdk.Environment(
+    account=os.environ.get("CDK_DEPLOY_ACCOUNT", os.environ["CDK_DEFAULT_ACCOUNT"]),
+    region=os.environ.get("CDK_DEPLOY_REGION", os.environ["CDK_DEFAULT_REGION"]),
 )
+
+LambdaStack(app, "CourtSchedulerLambdaStack", env=env)
+CourtSchedulerPipelineStack(app, "CourtSchedulerPipeline", env=env)
 app.synth()
