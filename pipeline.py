@@ -32,7 +32,10 @@ class CourtSchedulerPipelineStack(Stack):
                 branch="feature/pipeline",
             ),
             synth_action=SimpleSynthAction(
-                install_commands=["npm install -g aws-cdk"],
+                install_commands=[
+                    "npm install -g aws-cdk",
+                    "pip install -r requirements.txt",
+                ],
                 synth_command="make build",
                 source_artifact=source_artifact,
                 cloud_assembly_artifact=cloud_assembly_artifact,
