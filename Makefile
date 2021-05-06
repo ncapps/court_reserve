@@ -60,7 +60,7 @@ court_reserve/requirements_lock.txt: court_reserve/requirements.txt
 
 tmp/template.yaml: court_reserve/requirements_lock.txt .env app.py $(shell find court_reserve -type f)
 > mkdir --parents $(@D)
-> cdk synth --no-staging > $@
+> cdk synth CourtSchedulerLambdaStack --no-staging > $@
 
 local-invoke: tmp/template.yaml
 > function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $<)
