@@ -18,7 +18,7 @@ SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`
 build: court_scheduler/court_reserve_lambda/requirements_lock.txt .env app.py
-> cdk synth
+> cdk synth CourtSchedulerPipeline
 .PHONY: build
 
 clean:
@@ -63,7 +63,7 @@ tmp/.court_reserve_lambda.sentinel: .env app.py court_scheduler/court_reserve_la
 
 tmp/template.yaml: tmp/.court_reserve_lambda.sentinel
 > mkdir --parents $(@D)
-> cdk synth CourtSchedulerLambdaStack --no-staging > $@
+> cdk synth CourtReserveStack --no-staging > $@
 
 local-invoke: tmp/template.yaml
 > function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $<)
