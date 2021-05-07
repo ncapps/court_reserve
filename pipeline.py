@@ -48,4 +48,5 @@ class CourtSchedulerPipelineStack(Stack):
                 cloud_assembly_artifact=cloud_assembly_artifact,
                 environment=environment,
             ),
+            cross_account_keys=False,
         )
