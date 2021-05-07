@@ -1,8 +1,8 @@
 """ Pipeline stack
 """
-from aws_cdk.core import Stack, StackProps, Construct, SecretValue
+from aws_cdk.core import Stack, Construct, SecretValue
 from aws_cdk.pipelines import CdkPipeline, SimpleSynthAction
-
+from aws_cdk.aws_codebuild import BuildEnvironment, LinuxBuildImage
 import aws_cdk.aws_codepipeline as codepipeline
 import aws_cdk.aws_codepipeline_actions as codepipeline_actions
 
@@ -15,6 +15,10 @@ class CourtSchedulerPipelineStack(Stack):
 
         source_artifact = codepipeline.Artifact()
         cloud_assembly_artifact = codepipeline.Artifact()
+
+        environment = BuildEnvironment(
+            build_image=LinuxBuildImage.STANDARD_5_0, privileged=True
+        )
 
         CdkPipeline(
             self,
@@ -32,12 +36,16 @@ class CourtSchedulerPipelineStack(Stack):
                 branch="feature/pipeline",
             ),
             synth_action=SimpleSynthAction(
+                # Wait for docker to start
                 install_commands=[
+                    "nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &",
+                    'timeout 15 sh -c "until docker info; do echo .; sleep 1; done"',
                     "npm install -g aws-cdk",
                     "pip install -r requirements.txt",
                 ],
                 synth_command="make build",
                 source_artifact=source_artifact,
                 cloud_assembly_artifact=cloud_assembly_artifact,
+                environment=environment,
             ),
         )
