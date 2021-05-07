@@ -18,7 +18,7 @@ SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`
 build: court_scheduler/court_reserve_lambda/requirements_lock.txt .env app.py
-> cdk synth CourtSchedulerPipeline
+> cdk synth CourtReserveStack
 .PHONY: build
 
 clean:
