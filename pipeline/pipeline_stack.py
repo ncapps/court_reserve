@@ -43,6 +43,7 @@ class PipelineStack(Stack):
                     "nohup /usr/local/bin/dockerd --host=unix:///var/run/docker.sock --host=tcp://127.0.0.1:2375 --storage-driver=overlay2 &",
                     'timeout 15 sh -c "until docker info; do echo .; sleep 1; done"',
                     "npm install -g aws-cdk",
+                    "python -m pip install --upgrade pip",
                     "pip install -r requirements.txt",
                 ],
                 synth_command="make build",
