@@ -17,7 +17,7 @@ LOG_LEVEL ?= DEBUG
 SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`
-build: court_reserve/requirements_lock.txt .env app.py
+build: court_scheduler/court_reserve_lambda/requirements_lock.txt .env app.py
 > cdk synth
 .PHONY: build
 
@@ -25,7 +25,7 @@ clean:
 > @echo "Cleaning..."
 > rm -rf tmp
 > rm -rf cdk.out
-> rm -f court_reserve/requirements_lock.txt
+> rm -f court_scheduler/court_reserve_lambda/requirements_lock.txt
 > rm -f .env
 .PHONY: clean
 
@@ -33,11 +33,11 @@ tmp/secret.json:
 > mkdir --parents $(@D)
 > touch $@
 
-tmp/.get-secret.sentinel: tmp/secret.json
+tmp/.get_secret.sentinel: tmp/secret.json
 > aws secretsmanager get-secret-value --secret-id $(SECRET_ID) | jq -r .SecretString > $<
 > touch $@
 
-tmp/.update-secret.sentinel: tmp/secret.json
+tmp/.update_secret.sentinel: tmp/secret.json
 > aws secretsmanager update-secret --secret-id $(SECRET_ID) --secret-string file://$<
 > touch $@
 
@@ -48,7 +48,7 @@ update-secret: tmp/.update-secret.sentinel
 .PHONY: update-secret
 
 # Freeze only requirements in requirement.txt
-court_reserve/requirements_lock.txt: court_reserve/requirements.txt
+court_scheduler/court_reserve_lambda/requirements_lock.txt: court_scheduler/court_reserve_lambda/requirements.txt
 > pip freeze --requirement $< | grep --before-context=200 "pip freeze" | grep --invert-match "pip freeze" > $@
 
 .env: Makefile
@@ -58,7 +58,10 @@ court_reserve/requirements_lock.txt: court_reserve/requirements.txt
 > @echo SECRET_ID=$(SECRET_ID) >> $@
 > @echo LOCAL_TIMEZONE=America/Los_Angeles >> $@
 
-tmp/template.yaml: court_reserve/requirements_lock.txt .env app.py $(shell find court_reserve -type f)
+tmp/.court_reserve_lambda.sentinel: .env app.py court_scheduler/court_reserve_lambda/requirements_lock.txt \
+  $(shell find court_scheduler -type f)
+
+tmp/template.yaml: tmp/.court_reserve_lambda.sentinel
 > mkdir --parents $(@D)
 > cdk synth CourtSchedulerLambdaStack --no-staging > $@
 

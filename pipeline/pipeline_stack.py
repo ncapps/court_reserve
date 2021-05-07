@@ -1,4 +1,4 @@
-""" Pipeline stack
+""" pipeline_stack
 """
 from aws_cdk.core import Stack, Construct, SecretValue
 from aws_cdk.pipelines import CdkPipeline, SimpleSynthAction
@@ -6,21 +6,23 @@ from aws_cdk.aws_codebuild import BuildEnvironment, LinuxBuildImage
 import aws_cdk.aws_codepipeline as codepipeline
 import aws_cdk.aws_codepipeline_actions as codepipeline_actions
 
+from court_scheduler.court_scheduler_stage import CourtScheduler
 
-class CourtSchedulerPipelineStack(Stack):
-    """Pipeline stack"""
 
-    def __init__(self, scope: Construct, id_: str, **kwargs) -> None:
-        super().__init__(scope, id_, **kwargs)
+class PipelineStack(Stack):
+    """PipelineStack"""
+
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
 
         source_artifact = codepipeline.Artifact()
         cloud_assembly_artifact = codepipeline.Artifact()
 
-        environment = BuildEnvironment(
+        build_env = BuildEnvironment(
             build_image=LinuxBuildImage.STANDARD_5_0, privileged=True
         )
 
-        CdkPipeline(
+        pipeline = CdkPipeline(
             self,
             "Pipeline",
             cloud_assembly_artifact=cloud_assembly_artifact,
@@ -30,9 +32,9 @@ class CourtSchedulerPipelineStack(Stack):
                 oauth_token=SecretValue.secrets_manager(
                     "github-token", json_field="oauthToken"
                 ),
-                trigger=codepipeline_actions.GitHubTrigger.POLL,
                 owner="ncapps",
                 repo="court_reserve",
+                # TODO set to main for continuous delivery
                 branch="feature/pipeline",
             ),
             synth_action=SimpleSynthAction(
@@ -46,7 +48,9 @@ class CourtSchedulerPipelineStack(Stack):
                 synth_command="make build",
                 source_artifact=source_artifact,
                 cloud_assembly_artifact=cloud_assembly_artifact,
-                environment=environment,
+                environment=build_env,
             ),
             cross_account_keys=False,
         )
+
+        pipeline.add_application_stage(CourtScheduler(self, "Prod", env=kwargs["env"]))
