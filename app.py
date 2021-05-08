@@ -1,67 +1,22 @@
-""" Build AWS cloud resources
+""" CDK app
 """
-from pathlib import Path
+#!/usr/bin/env python3
 
-from aws_cdk import (
-    aws_lambda as lambda_,
-    aws_events as events,
-    aws_events_targets as targets,
-    aws_secretsmanager as secretsmanager,
-    aws_logs as logs,
-    core as cdk,
+import os
+
+from aws_cdk.core import App, Environment
+
+from pipeline.pipeline_stack import PipelineStack
+from court_scheduler.court_reserve_stack import CourtReserveStack
+
+
+# https://docs.aws.amazon.com/cdk/latest/guide/environments.html
+environment = Environment(
+    account=os.environ.get("CDK_DEPLOY_ACCOUNT", os.environ["CDK_DEFAULT_ACCOUNT"]),
+    region=os.environ.get("CDK_DEPLOY_REGION", os.environ["CDK_DEFAULT_REGION"]),
 )
-from dotenv import dotenv_values
 
-CONFIG = {**dotenv_values(".env")}
-
-
-class LambdaStack(cdk.Stack):
-    """Lambda cron to reserve court time"""
-
-    def __init__(self, scope, id_, **kwargs):
-        super().__init__(scope, id_, **kwargs)
-
-        # https://docs.aws.amazon.com/cdk/api/latest/python/aws_cdk.aws_lambda/Function.html
-        lambda_fn = lambda_.Function(
-            self,
-            "CronFunction",
-            description="Reserves a tennis court",
-            code=lambda_.Code.from_asset(
-                path=str(Path("court_reserve").resolve()),
-                bundling=cdk.BundlingOptions(
-                    image=lambda_.Runtime.PYTHON_3_8.bundling_image,
-                    command=[
-                        "bash",
-                        "-c",
-                        "pip install -r requirements.txt -t /asset-output && cp -au . /asset-output",
-                    ],
-                ),
-            ),
-            environment={**CONFIG},
-            runtime=lambda_.Runtime.PYTHON_3_8,
-            handler="court_reserve.handler",
-            memory_size=512,
-            timeout=cdk.Duration.seconds(30),
-            log_retention=logs.RetentionDays.TWO_WEEKS,
-        )
-
-        # Run every day at 9AM PDT (UTC -7)
-        rule = events.Rule(
-            self,
-            "Rule",
-            schedule=events.Schedule.cron(minute="0", hour="16"),
-        )
-        rule.add_target(targets.LambdaFunction(lambda_fn))
-
-        # Grant read access to secret
-        secret = secretsmanager.Secret.from_secret_name_v2(
-            self, "SecretFromName", CONFIG["SECRET_ID"]
-        )
-        secret.grant_read(lambda_fn)
-
-        self.export_value(lambda_fn.function_name, name="lambdaCronFunctionName")
-
-
-app = cdk.App()
-LambdaStack(app, "LambdaStack")
+app = App()
+PipelineStack(app, "CourtSchedulerPipeline", env=environment)
+CourtReserveStack(app, "CourtReserveStack", env=environment)
 app.synth()

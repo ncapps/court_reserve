@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 
-pipenv install --dev
-
 cat << 'EOF' >> /home/vscode/.zshrc
-pipenv shell
+source /workspaces/court_reserve/scripts/venv.sh
 autoload bashcompinit && bashcompinit
 autoload -Uz compinit && compinit
 compinit

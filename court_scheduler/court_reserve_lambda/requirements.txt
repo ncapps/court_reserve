@@ -1,0 +1,3 @@
+boto3 >=1.17.66
+python-dateutil>=2.8.1
+Scrapy>=2.5.0

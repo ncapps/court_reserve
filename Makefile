@@ -17,27 +17,26 @@ LOG_LEVEL ?= DEBUG
 SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`
-build: court_reserve/requirements.txt .env app.py
-> cdk synth
+build: .env app.py
+> cdk synth CourtReserveStack
 .PHONY: build
 
 clean:
 > @echo "Cleaning..."
 > rm -rf tmp
 > rm -rf cdk.out
-> rm -f court_reserve/requirements.txt
 > rm -f .env
 .PHONY: clean
 
 tmp/secret.json:
-> mkdir -p $(@D)
+> mkdir --parents $(@D)
 > touch $@
 
-tmp/.get-secret.sentinel: tmp/secret.json
+tmp/.get_secret.sentinel: tmp/secret.json
 > aws secretsmanager get-secret-value --secret-id $(SECRET_ID) | jq -r .SecretString > $<
 > touch $@
 
-tmp/.update-secret.sentinel: tmp/secret.json
+tmp/.update_secret.sentinel: tmp/secret.json
 > aws secretsmanager update-secret --secret-id $(SECRET_ID) --secret-string file://$<
 > touch $@
 
@@ -47,8 +46,9 @@ get-secret: tmp/.get-secret.sentinel
 update-secret: tmp/.update-secret.sentinel
 .PHONY: update-secret
 
-court_reserve/requirements.txt: Pipfile.lock
-> pipenv lock --requirements > $@
+# Freeze only requirements in requirement.txt
+court_scheduler/court_reserve_lambda/requirements_lock.txt: court_scheduler/court_reserve_lambda/requirements.txt
+> pip freeze --requirement $< | grep --before-context=200 "pip freeze" | grep --invert-match "pip freeze" > $@
 
 .env: Makefile
 > @echo DRY_RUN=$(DRY_RUN) > $@
@@ -57,9 +57,12 @@ court_reserve/requirements.txt: Pipfile.lock
 > @echo SECRET_ID=$(SECRET_ID) >> $@
 > @echo LOCAL_TIMEZONE=America/Los_Angeles >> $@
 
-tmp/template.yaml: court_reserve/requirements.txt .env app.py $(shell find court_reserve -type f)
-> mkdir -p $(@D)
-> cdk synth --no-staging > $@
+tmp/.court_reserve_lambda.sentinel: .env app.py court_scheduler/court_reserve_lambda/requirements_lock.txt \
+  $(shell find court_scheduler -type f)
+
+tmp/template.yaml: tmp/.court_reserve_lambda.sentinel
+> mkdir --parents $(@D)
+> cdk synth CourtReserveStack --no-staging > $@
 
 local-invoke: tmp/template.yaml
 > function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $<)
