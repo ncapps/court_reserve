@@ -34,8 +34,7 @@ class PipelineStack(Stack):
                 ),
                 owner="ncapps",
                 repo="court_reserve",
-                # TODO set to main for continuous delivery
-                branch="feature/pipeline",
+                branch=" main",
             ),
             synth_action=SimpleSynthAction(
                 # Wait for docker to start
