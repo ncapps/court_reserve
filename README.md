@@ -10,16 +10,4 @@ DRY_RUN=true make local-invoke
 ```
 
 ## Deployment
-AWS resources are defined and deployed using [AWS Cloud Development Kit (CDK)](https://docs.aws.amazon.com/cdk/latest/guide/cli.html)
-
-- Helpful commands
-```sh
-# Synthesizes CloudFormation template
-make build
-
-# Compares the deployed stack with the synthesized template
-cdk diff
-
-# Deploys CloudFormation stack
-cdk deploy
-```
+AWS resource deployment is automated on merge to the main branch. This is the preferred method of deployment.
