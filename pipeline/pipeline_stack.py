@@ -34,7 +34,7 @@ class PipelineStack(Stack):
                 ),
                 owner="ncapps",
                 repo="court_reserve",
-                branch=" main",
+                branch="main",
             ),
             synth_action=SimpleSynthAction(
                 # Wait for docker to start
