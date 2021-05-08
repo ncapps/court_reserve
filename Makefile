@@ -17,8 +17,8 @@ LOG_LEVEL ?= DEBUG
 SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`
-build: .env app.py
-> cdk synth CourtReserveStack
+build: .env
+> cdk synth
 .PHONY: build
 
 clean:
@@ -57,14 +57,18 @@ court_scheduler/court_reserve_lambda/requirements_lock.txt: court_scheduler/cour
 > @echo SECRET_ID=$(SECRET_ID) >> $@
 > @echo LOCAL_TIMEZONE=America/Los_Angeles >> $@
 
-tmp/.court_reserve_lambda.sentinel: .env app.py court_scheduler/court_reserve_lambda/requirements_lock.txt \
-  $(shell find court_scheduler -type f)
+tmp/.court_reserve_lambda.sentinel: app.py court_scheduler/court_reserve_lambda/requirements_lock.txt \
+  $(shell find court_scheduler -type f) build
 
 tmp/template.yaml: tmp/.court_reserve_lambda.sentinel
 > mkdir --parents $(@D)
-> cdk synth CourtReserveStack --no-staging > $@
+> cdk synth CourtSchedulerPipeline/Prod/CourtReserve --no-staging > $@
 
 local-invoke: tmp/template.yaml
 > function_name=$(shell yq eval '.Outputs.ExportlambdaCronFunctionName.Value.Ref' $<)
 > sam local invoke "$${function_name}" --no-event --template-file $<
 .PHONY: local-invoke
+
+deploy-pipeline: .env
+> cdk deploy
+.PHONY: deploy-pipeline
