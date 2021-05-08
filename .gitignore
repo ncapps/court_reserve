@@ -141,7 +141,6 @@ cython_debug/
 .vscode
 
 tmp
-requirements_lock.txt
 
 # CDK Context & Staging files
 .cdk.staging/

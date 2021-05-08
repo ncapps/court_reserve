@@ -7,7 +7,7 @@ if [[ ! -d $WORKSPACE/venv ]]; then
     source $WORKSPACE/venv/bin/activate
     python -m pip install --upgrade pip
     pip install -r $WORKSPACE/requirements.txt \
-        -r $WORKSPACE/court_reserve/requirements.txt
+        -r $WORKSPACE/court_scheduler/court_reserve_lambda/requirements.txt
 else
     source $WORKSPACE/venv/bin/activate
 fi
