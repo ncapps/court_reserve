@@ -33,7 +33,7 @@ class PipelineStack(Stack):
                     "github-token", json_field="oauthToken"
                 ),
                 owner="ncapps",
-                repo="court_reserve",
+                repo="court_scheduler",
                 branch="main",
             ),
             synth_action=SimpleSynthAction(

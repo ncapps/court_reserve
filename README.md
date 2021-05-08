@@ -1,4 +1,4 @@
-# Court Reserve Bot
+# Tennis Court Scheduler
 This project uses [Scrapy](https://docs.scrapy.org/en/latest/index.html) to make tennis court reservations.
 ## Getting started
 

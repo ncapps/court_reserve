@@ -10,9 +10,5 @@ aws-cdk.aws-secretsmanager>=1.102.0
 aws-cdk.core>=1.102.0
 aws-cdk.pipelines>=1.102.0
 
-# IDE
-black>=21.5b0
-pylint>=2.8.2
-
 # Misc
 python-dotenv>=0.17.1

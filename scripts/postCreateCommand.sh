@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 cat << 'EOF' >> /home/vscode/.zshrc
-source /workspaces/court_reserve/scripts/venv.sh
+source /workspaces/court_scheduler/scripts/venv.sh
 autoload bashcompinit && bashcompinit
 autoload -Uz compinit && compinit
 compinit
