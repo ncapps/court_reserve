@@ -40,10 +40,10 @@ tmp/.update_secret.sentinel: tmp/secret.json
 > aws secretsmanager update-secret --secret-id $(SECRET_ID) --secret-string file://$<
 > touch $@
 
-get-secret: tmp/.get-secret.sentinel
+get-secret: tmp/.get_secret.sentinel
 .PHONY: get-secret
 
-update-secret: tmp/.update-secret.sentinel
+update-secret: tmp/.update_secret.sentinel
 .PHONY: update-secret
 
 # Freeze only requirements in requirement.txt
