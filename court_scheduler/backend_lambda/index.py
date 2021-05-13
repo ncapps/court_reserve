@@ -1,21 +1,34 @@
 #!/usr/bin/env python
 """ app.courtreserve.com adapter """
 import logging
+import logging.config
 
 import requests
 from bs4 import BeautifulSoup
 
+logging.config.fileConfig(fname="logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
 
 
-class CourtReserveClient:
+class CourtReserveAdapter:
     """Interfaces with app.courtreserve.com"""
 
     def __init__(
         self, org_id: str = None, username: str = None, password: str = None
     ) -> None:
-        self.session = requests.Session()
+        """
+        Initiator will login if organization id, username, and password are provided.
 
+        Args:
+            org_id (str): Optional organization id
+            username (str): Optional username
+            password (str): Optional password
+
+        Returns:
+            None
+
+        """
+        self.session = requests.Session()
         if org_id and username and password:
             self.login(org_id, username, password)
 
@@ -29,9 +42,9 @@ class CourtReserveClient:
         Returns:
             Response object
 
-
+        Raises:
+            AssertionError
         """
-
         request = requests.Request(
             method.upper(), f"https://app.courtreserve.com/Online/{path}", **kwargs
         )
@@ -66,9 +79,8 @@ class CourtReserveClient:
         )
 
         response = self._request("POST", path, data=payload)
-
-        print(response.status_code)
-        print(response.url)
+        # Expect redirect on successful login
+        assert response.url.find("Account/Login") == -1, "Login attempt failed."
 
 
 def handler(event=None, context=None):
@@ -86,8 +98,11 @@ def handler(event=None, context=None):
 
     # Check if a reservation should be made, otherwise exit
 
-    # Create CourtReserveClient
-    court_reserve = CourtReserveClient()
+    # Create CourtReserve
+    try:
+        court_reserve = CourtReserveAdapter()
+    except AssertionError as err:
+        print(err)
 
 
 if __name__ == "__main__":
