@@ -72,3 +72,9 @@ local-invoke: tmp/template.yaml
 deploy-pipeline: .env
 > cdk deploy
 .PHONY: deploy-pipeline
+
+run-dev: .env
+> @export $(shell cat .env | xargs)
+> @cd court_scheduler/court_scheduler_lambda
+> @python index.py
+.PHONY: run-dev
