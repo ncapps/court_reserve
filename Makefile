@@ -51,11 +51,10 @@ court_scheduler/court_reserve_lambda/requirements_lock.txt: court_scheduler/cour
 > pip freeze --requirement $< | grep --before-context=200 "pip freeze" | grep --invert-match "pip freeze" > $@
 
 .env: Makefile
-> @echo DRY_RUN=$(DRY_RUN) > $@
+> @echo SECRET_ID=$(SECRET_ID) > $@
 > @echo DAYS_OFFSET=$(DAYS_OFFSET) >> $@
-> @echo LOG_LEVEL=$(LOG_LEVEL) >> $@
-> @echo SECRET_ID=$(SECRET_ID) >> $@
 > @echo LOCAL_TIMEZONE=America/Los_Angeles >> $@
+> @echo DRY_RUN=$(DRY_RUN) >> $@
 
 tmp/.court_reserve_lambda.sentinel: app.py court_scheduler/court_reserve_lambda/requirements_lock.txt \
   $(shell find court_scheduler -type f) build
