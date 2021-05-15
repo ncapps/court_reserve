@@ -36,6 +36,7 @@ class CourtReserveAdapter:
         """
         self.org_id = org_id
         self.session_id = None
+        self.http_headers = None
         self.session = requests.Session()
         if org_id and username and password:
             self._login(username, password)
@@ -98,16 +99,7 @@ class CourtReserveAdapter:
         self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
         logger.info("Found session id: %s", self.session_id)
 
-    def _http_headers(self):
-        """Returns HTTP headers for requests to the app.courtreserve.com API
-
-        Args:
-            None
-
-        Returns:
-            Dictionary of HTTP Headers to send with a Request
-        """
-        return {
+        self.http_headers = {
             "authority": "app.courtreserve.com",
             "sec-ch-ua": (
                 '"Google Chrome";v="89", "Chromium";v="89",' '";Not A ' 'Brand";v="99"x'
@@ -127,7 +119,7 @@ class CourtReserveAdapter:
             "sec-fetch-dest": "empty",
             "referer": (
                 "https://app.courtreserve.com/Online/Reservations/Bookings/"
-                f"{self.org_id}?sId={self.session_id}",
+                f"{self.org_id}?sId={self.session_id}"
             ),
             "accept-language": "en-US,en;q=0.9",
         }
@@ -186,4 +178,12 @@ class CourtReserveAdapter:
             "MemberFamilyId": "",
         }
 
+        response = self._request(
+            "POST",
+            f"Reservations/ReadExpanded/{self.org_id}",
+            data=f"jsonData={payload}",
+            headers=self.http_headers,
+        )
+
+        print(response.text)
         return ["todo"]
