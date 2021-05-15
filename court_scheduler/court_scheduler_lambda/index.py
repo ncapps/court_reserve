@@ -37,7 +37,15 @@ def handler(event=None, context=None):
         if not preferences:
             # TODO Lambda return value
             return
-        # Create CourtReserve
+
+        # Login to CourtReserve
+        court_reserve = CourtReserveAdapter(
+            org_id=settings["ORG_ID"],
+            username=settings["USERNAME"],
+            password=settings["PASSWORD"],
+        )
+
+        print(court_reserve.session_id)
 
     except KeyError as err:
         # TODO Lambda return value
