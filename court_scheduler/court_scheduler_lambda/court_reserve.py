@@ -2,6 +2,7 @@
 """
 import logging
 import logging.config
+from os import curdir
 import requests
 import re
 from datetime import datetime
@@ -95,6 +96,7 @@ class CourtReserveAdapter:
             .get("href")
         )
         self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
+        logger.info("Found session id: %s", self.session_id)
 
     def _http_headers(self):
         """Returns HTTP headers for requests to the app.courtreserve.com API
@@ -130,6 +132,58 @@ class CourtReserveAdapter:
             "accept-language": "en-US,en;q=0.9",
         }
 
-    def list_reservations(self, reserve_date: datetime):
-        """ """
+    def list_reservations(self, date: datetime):
+        """Returns existing reservations grouped by court id
+
+        Arg:
+            date (datetime): Reservation date
+
+        Returns:
+            (dict) For each court id, a list of start and end datetime the
+                    court is reserved
+        """
+        # Get court selection criteria
+
+        response = self._request(
+            "GET", f"Reservations/Bookings/{self.org_id}?sId={self.session_id}"
+        )
+        pattern = re.compile(r"getSelectedCriteriasCourtsView\(\)")
+        court_criteria = [
+            str(script.string)
+            for script in BeautifulSoup(response.text, "html.parser").select(
+                "#wrapper div.content div.row div.col-lg-12 script"
+            )
+            if pattern.search(str(script.string)) is not None
+        ][0]
+        time_zone = re.search(r"TimeZone: '([A-Za-z_\/]+)'", court_criteria).group(1)
+        cost_type_id = re.search("CostTypeId: '([0-9]+)'", court_criteria).group(1)
+        court_ids = re.search("SelectedCourtIds: '([0-9,]+)'", court_criteria).group(1)
+        member_id = re.search("MemberIds: '([0-9]+)'", court_criteria).group(1)
+
+        payload = {
+            "startDate": f"{date.strftime('%Y-%m-%d')}T07:00:00.000Z",
+            "end": f"{date.strftime('%Y-%m-%d')}T07:00:00.000Z",
+            "orgId": self.org_id,
+            "TimeZone": time_zone,
+            "Date": (
+                f"{date.strftime('%a')},"
+                f" {date.day}"
+                f" {date.strftime('%b')}"
+                f" {date.year}"
+                f" 07:00:00 GMT"
+            ),
+            "KendoDate": {
+                "Year": date.year,
+                "Month": date.month,
+                "Day": date.day,
+            },
+            "UiCulture": "en-US",
+            "CostTypeId": cost_type_id,
+            "CustomSchedulerId": self.session_id,
+            "ReservationMinInterval": "60",
+            "SelectedCourtIds": court_ids,
+            "MemberIds": member_id,
+            "MemberFamilyId": "",
+        }
+
         return ["todo"]
