@@ -96,6 +96,40 @@ class CourtReserveAdapter:
         )
         self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
 
+    def _http_headers(self):
+        """Returns HTTP headers for requests to the app.courtreserve.com API
+
+        Args:
+            None
+
+        Returns:
+            Dictionary of HTTP Headers to send with a Request
+        """
+        return {
+            "authority": "app.courtreserve.com",
+            "sec-ch-ua": (
+                '"Google Chrome";v="89", "Chromium";v="89",' '";Not A ' 'Brand";v="99"x'
+            ),
+            "accept": "*/*",
+            "x-requested-with": "XMLHttpRequest",
+            "sec-ch-ua-mobile": "?0",
+            "user-agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_3) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 "
+                "Safari/537.36"
+            ),
+            "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "origin": "https://app.courtreserve.com",
+            "sec-fetch-site": "same-origin",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-dest": "empty",
+            "referer": (
+                "https://app.courtreserve.com/Online/Reservations/Bookings/"
+                f"{self.org_id}?sId={self.session_id}",
+            ),
+            "accept-language": "en-US,en;q=0.9",
+        }
+
     def list_reservations(self, reserve_date: datetime):
         """ """
         return ["todo"]
