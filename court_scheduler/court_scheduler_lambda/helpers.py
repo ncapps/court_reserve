@@ -62,7 +62,7 @@ def court_preferences(preferences, booking_date):
                 {
                     "monday": {
                         "start_end_times": [["6:30 PM","8:00 PM"],["7:00 PM","8:00 PM"]],
-                        "court_ids": ["123","456",]
+                        "courts": ["Court #1","Court #2",]
                     }
                 }
         booking_date (datetime): Datetime to reserve a court
@@ -83,9 +83,40 @@ def court_preferences(preferences, booking_date):
         return []
 
     prefs = [
-        (court_id, (str_to_date(start), str_to_date(end)))
+        (court, (str_to_date(start), str_to_date(end)))
         for start, end in preferences[weekday_name]["start_end_times"]
-        for court_id in preferences[weekday_name]["court_ids"]
+        for court in preferences[weekday_name]["courts"]
     ]
     logger.info("Found %s preferences for %s", len(prefs), weekday_name)
     return prefs
+
+
+def find_open_court(bookings, preferences):
+    """Compares existing bookings with user preferences
+        and returns the first open court found
+
+    Args:
+        bookings (dict): Court bookings grouped by court label
+        preferences (list): List of court and time preferences
+
+    Returns:
+        (tuple) Court label, start datetime, end datetime
+        (None) Returns None when an open court is not found
+    """
+    for court, pref_start_end in preferences:
+        pref_start, pref_end = pref_start_end
+        conflict = False
+        for booked_start, booked_end in bookings.get(court, []):
+            if pref_end > booked_start and pref_start < booked_end:
+                conflict = True
+        if not conflict:
+            logger.info(
+                "%s is open from %s to %s",
+                court,
+                pref_start.strftime("%I:%M %p"),
+                pref_end.strftime("%I:%M %p"),
+            )
+            return (court, pref_start, pref_end)
+
+    logger.info("Open court not found.")
+    return None

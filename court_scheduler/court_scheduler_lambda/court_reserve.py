@@ -126,14 +126,14 @@ class CourtReserveAdapter:
             "accept-language": "en-US,en;q=0.9",
         }
 
-    def list_reservations(self, date: datetime):
-        """Returns existing reservations grouped by court id
+    def list_reservations(self, date: datetime) -> dict:
+        """Returns existing reservations grouped by court
 
         Arg:
             date (datetime): Reservation date
 
         Returns:
-            (dict) For each court id, a list of start and end datetime the
+            (dict) For each court, a list of start and end datetime the
                     court is reserved
         """
         # Get court selection criteria
@@ -190,11 +190,14 @@ class CourtReserveAdapter:
         logger.info("Found %s reservations", json_resp["Total"])
 
         tz_obj = tz.obj = tz.gettz(time_zone)
-        bookings_by_court = defaultdict(list)
+        court_bookings = {"label_to_id": {}}
         epoch_re = re.compile("[0-9]+")
         # Get datetime objects from POSIX timestamp, grouped by court id
         for booking in json_resp["Data"]:
-            bookings_by_court[str(booking["CourtId"])].append(
+            court_label = str(booking["CourtLabel"])
+            if not court_bookings.get(court_label):
+                court_bookings[court_label] = []
+            court_bookings[court_label].append(
                 (
                     datetime.fromtimestamp(
                         int(epoch_re.search(booking["Start"]).group(0)) / 1000,
@@ -205,12 +208,15 @@ class CourtReserveAdapter:
                     ),
                 )
             )
+            court_bookings["label_to_id"][court_label] = booking["CourtId"]
 
         # Merge contiguous reservations by court
-        for court_id, _bookings in bookings_by_court.items():
-            bookings_by_court[court_id] = self._merge_bookings(_bookings)
+        re_pattern = re.compile("Court #[0-9]+")
+        for court_label, _bookings in court_bookings.items():
+            if re_pattern.search(court_label):
+                court_bookings[court_label] = self._merge_bookings(_bookings)
 
-        return bookings_by_court
+        return court_bookings
 
     @staticmethod
     def _merge_bookings(bookings: list) -> list:

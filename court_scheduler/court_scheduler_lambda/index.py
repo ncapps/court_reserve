@@ -8,7 +8,7 @@ import json
 from botocore.exceptions import ClientError
 
 from court_reserve import CourtReserveAdapter
-from helpers import get_secret_value, offset_today, court_preferences
+from helpers import get_secret_value, offset_today, court_preferences, find_open_court
 
 logging.config.fileConfig(fname="logging.conf", disable_existing_loggers=False)
 logger = logging.getLogger(__name__)
@@ -33,19 +33,27 @@ def handler(event=None, context=None):
         settings = json.loads(get_secret_value(CONFIG["SECRET_ID"]))
         booking_date = offset_today(CONFIG["DAYS_OFFSET"], CONFIG["LOCAL_TIMEZONE"])
 
-        preferences = court_preferences(settings["PREFERENCES"], booking_date)
+        preferences = court_preferences(settings["PREFERENCES_V2"], booking_date)
         if not preferences:
             # TODO Lambda return value
             return
 
-        # Login to CourtReserve
+        # Get existing reservations from app.courtreserve.com
         court_reserve = CourtReserveAdapter(
             org_id=settings["ORG_ID"],
             username=settings["USERNAME"],
             password=settings["PASSWORD"],
         )
+        bookings = court_reserve.list_reservations(date=booking_date)
 
-        print(court_reserve.session_id)
+        # Find open court
+        open_court = find_open_court(bookings, preferences)
+        if not open_court:
+            # TODO Lambda return value
+            return
+
+        # TODO Create reservation
+        print(bookings["label_to_id"])
 
     except KeyError as err:
         # TODO Lambda return value
