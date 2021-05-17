@@ -81,23 +81,18 @@ class CourtReserveAdapter:
 
         # Add hidden __RequestVerificationToken to login request
         response = self._request("GET", path)
-        payload[token_name] = (
-            BeautifulSoup(response.text, "html.parser")
-            .find(id="loginForm")
-            .find(attrs={"name": token_name})
-            .get("value")
-        )
+        soup = BeautifulSoup(response.text, "html.parser")
+        payload[token_name] = soup.find(id="loginForm").find(
+            attrs={"name": token_name}
+        )["value"]
 
         response = self._request("POST", path, data=payload)
         # Expect redirect on successful login
         assert response.url.find("Account/Login") == -1, "Login attempt failed."
 
         # Get session id
-        bookings_path = (
-            BeautifulSoup(response.text, "html.parser")
-            .select_one("li.sub-menu-li a")
-            .get("href")
-        )
+        soup = BeautifulSoup(response.text, "html.parser")
+        bookings_path = soup.select_one("li.sub-menu-li a")["href"]
         self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
         logger.info("Found session id: %s", self.session_id)
 
@@ -142,9 +137,10 @@ class CourtReserveAdapter:
             "GET", f"Reservations/Bookings/{self.org_id}?sId={self.session_id}"
         )
         pattern = re.compile(r"getSelectedCriteriasCourtsView\(\)")
+        soup = BeautifulSoup(response.text, "html.parser")
         court_criteria = [
             str(script.string)
-            for script in BeautifulSoup(response.text, "html.parser").select(
+            for script in soup.select(
                 "#wrapper div.content div.row div.col-lg-12 script"
             )
             if pattern.search(str(script.string)) is not None
@@ -219,6 +215,132 @@ class CourtReserveAdapter:
             )
 
         return court_bookings
+
+    def create_reservation(
+        self, court: str, start: datetime, end: datetime, players: list
+    ):
+        """Creates a court reservation
+
+        Args:
+            start (datetime): Reservation start date and time
+            end (datetime): Reservation end date and time
+            court (str): Court label (i.e. "Court #1")
+
+        Returns:
+            TBD
+        """
+        path = f"Reservations/CreateReservationCourtsview/{self.org_id}"
+        params = {
+            "start": start.strftime("%a %b %d %Y %H:%M:%S GMT%z (%Z)"),
+            "end": end.strftime("%a %b %d %Y %H:%M:%S GMT%z (%Z)"),
+            "courtLabel": court,
+            "customSchedulerId": self.session_id,
+        }
+        response = self._request("GET", path, params=params, headers=self.http_headers)
+        soup = BeautifulSoup(response.text, "html.parser")
+        token = soup.select_one("#createReservation-Form input")["value"]
+        court_id = soup.find("input", id="CourtId")["value"]
+        member_id = soup.find("input", id="MemberId")["value"]
+        membership_id = soup.find("input", id="MembershipId")["value"]
+
+        # Get organizing player details
+        path = f"AjaxController/CalculateReservationCostMemberPortal/{self.org_id}"
+        payload = {
+            "Start": start.strftime("%H:%M:%S"),
+            "End": "",
+            "CourtType": "2",
+            "MiscFees": "",
+            "ReservationTypeId": "",
+            "RegisteringOrganizationMemberId": "",
+            "Date": start.strftime("%m/%d/%Y 12:00:00 AM"),
+            "NumberOfGuests": "",
+            "MembersString": [],
+        }
+        response = self._request("POST", path, data=payload, headers=self.http_headers)
+        soup = BeautifulSoup(json.loads(response.text)["memberTable"], "html.parser")
+        org_member_id = soup.find("input", id="SelectedMembers_0__OrgMemberId")["value"]
+        member0_firstname = soup.find("input", id=f"hidden-firstname_{org_member_id}")[
+            "value"
+        ]
+        member0_lastname = soup.find("input", id=f"hidden-lastname_{org_member_id}")[
+            "value"
+        ]
+        member0_email = soup.find("input", id=f"hidden-email_{org_member_id}")["value"]
+
+        # Get additional player details
+        # TODO Add support for doubles
+        path = f"AjaxController/GetMembersToPlayWith/{self.org_id}"
+        params = {
+            "costTypeId": membership_id,
+            "filterValue": players[0],
+            "organizationMemberIdsString": "",
+            "filter[filters][0][value]": players[0],
+            "filter[filters][0][field]": "DisplayName",
+            "filter[filters][0][operator]": "contains",
+            "filter[filters][0][ignoreCase]": "true",
+            "filter[logic]": "and",
+        }
+        response = self._request("GET", path, params=params, headers=self.http_headers)
+        player2 = json.loads(response.text)[0]
+
+        body = (
+            f"__RequestVerificationToken={token}&"
+            f"Id={self.org_id}&"
+            f"OrgId={self.org_id}&"
+            f"MemberId={member_id}&"
+            "MemberIds=&"
+            "IsConsolidatedScheduler=True&"
+            f"Date={start.strftime('%m/%d/%Y 12:00:00 AM')}&"
+            "HoldTimeForReservation=15&"
+            "RequirePaymentWhenBookingCourtsOnline=False&"
+            "AllowMemberToPickOtherMembersToPlayWith=True&"
+            "ReservableEntityName=Court&"
+            "IsAllowedToPickStartAndEndTime=False&"
+            f"CustomSchedulerId={self.session_id}&"
+            "IsConsolidated=False&"
+            "IsToday=False&"
+            f"Id={self.org_id}&"
+            f"OrgId={self.org_id}&"
+            f"Date={start.strftime('%m/%d/%Y 12:00:00 AM')}&"
+            "SelectedCourtType=Hard&"
+            "SelectedCourtTypeId=0&"
+            "DisclosureText=&"
+            "DisclosureName=&"
+            f"StartTime={start.strftime('%H:%M:%S')}&"
+            "CourtTypeEnum=2&"
+            f"MembershipId={membership_id}&"
+            f"CustomSchedulerId={self.session_id}&"
+            "IsAllowedToPickStartAndEndTime=False&"
+            "UseMinTimeByDefault=False&"
+            "IsEligibleForPreauthorization=False&"
+            "ReservationTypeId=17591&"
+            "Duration=60&"
+            f"CourtId={court_id}&"
+            "OwnersDropdown_input=&"
+            "OwnersDropdown=&"
+            f"SelectedMembers[0].OrgMemberId={org_member_id}&"
+            f"SelectedMembers[0].MemberId={member_id}&"
+            "SelectedMembers[0].MemberFamilyId=&"
+            f"SelectedMembers[0].FirstName={member0_firstname}&"
+            f"SelectedMembers[0].LastName={member0_lastname}&"
+            f"SelectedMembers[0].Email={member0_email}&"
+            "SelectedMembers[0].PaidAmt=&"
+            f"SelectedMembers[0].MembershipNumber={org_member_id}&"
+            "SelectedMembers[0].PriceToPay=0&"
+            f"SelectedMembers[1].OrgMemberId={player2['MemberOrgId']}&"
+            f"SelectedMembers[1].MemberId={player2['MemberId']}&"
+            "SelectedMembers[1].MemberFamilyId=&"
+            f"SelectedMembers[1].FirstName={player2['FirstName']}&"
+            f"SelectedMembers[1].LastName={player2['LastName']}&"
+            "SelectedMembers[1].Email=&"
+            "SelectedMembers[1].PaidAmt=&"
+            f"SelectedMembers[1].MembershipNumber={player2['MemberOrgId']}&"
+            "SelectedMembers[1].PriceToPay=0&"
+            "SelectedNumberOfGuests=&"
+            "X-Requested-With=XMLHttpRequest"
+        )
+
+        print(body)
 
     @staticmethod
     def _merge_bookings(bookings: list) -> list:

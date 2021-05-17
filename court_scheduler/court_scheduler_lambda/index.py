@@ -52,7 +52,11 @@ def handler(event=None, context=None):
             # TODO Lambda return value
             return
 
-        # TODO Create reservation
+        # Create reservation
+        weekday_name = booking_date.strftime("%A").lower()
+        players = settings["PREFERENCES_V2"][weekday_name]["players"]
+        court, start, end = open_court
+        court_reserve.create_reservation(court, start, end, players)
 
     except KeyError as err:
         # TODO Lambda return value
