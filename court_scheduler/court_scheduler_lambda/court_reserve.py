@@ -190,14 +190,17 @@ class CourtReserveAdapter:
         logger.info("Found %s reservations", json_resp["Total"])
 
         tz_obj = tz.obj = tz.gettz(time_zone)
-        court_bookings = {"label_to_id": {}}
+        court_bookings = {}
         epoch_re = re.compile("[0-9]+")
         # Get datetime objects from POSIX timestamp, grouped by court id
         for booking in json_resp["Data"]:
             court_label = str(booking["CourtLabel"])
             if not court_bookings.get(court_label):
-                court_bookings[court_label] = []
-            court_bookings[court_label].append(
+                court_bookings[court_label] = {
+                    "court_id": booking["CourtId"],
+                    "start_end_times": [],
+                }
+            court_bookings[court_label]["start_end_times"].append(
                 (
                     datetime.fromtimestamp(
                         int(epoch_re.search(booking["Start"]).group(0)) / 1000,
@@ -208,13 +211,12 @@ class CourtReserveAdapter:
                     ),
                 )
             )
-            court_bookings["label_to_id"][court_label] = booking["CourtId"]
 
         # Merge contiguous reservations by court
-        re_pattern = re.compile("Court #[0-9]+")
-        for court_label, _bookings in court_bookings.items():
-            if re_pattern.search(court_label):
-                court_bookings[court_label] = self._merge_bookings(_bookings)
+        for court_label in court_bookings:
+            court_bookings[court_label]["start_end_times"] = self._merge_bookings(
+                court_bookings[court_label]["start_end_times"]
+            )
 
         return court_bookings
 
@@ -232,10 +234,11 @@ class CourtReserveAdapter:
             return bookings
 
         # Sort by start time
-        bookings.sort(key=lambda x: x[0])
-        merged_list = [(bookings[0])]
+        _bookings = bookings.copy()
+        _bookings.sort(key=lambda x: x[0])
+        merged_list = [(_bookings[0])]
 
-        for current_start_time, current_end_time in bookings[1:]:
+        for current_start_time, current_end_time in _bookings[1:]:
             # check if the current start time is less than the end time of the
             # latest end time in the merged list
             last_merged_start, last_merged_end = merged_list[-1]

@@ -53,7 +53,6 @@ def handler(event=None, context=None):
             return
 
         # TODO Create reservation
-        print(bookings["label_to_id"])
 
     except KeyError as err:
         # TODO Lambda return value

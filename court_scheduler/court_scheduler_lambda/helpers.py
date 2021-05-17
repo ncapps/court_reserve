@@ -106,7 +106,7 @@ def find_open_court(bookings, preferences):
     for court, pref_start_end in preferences:
         pref_start, pref_end = pref_start_end
         conflict = False
-        for booked_start, booked_end in bookings.get(court, []):
+        for booked_start, booked_end in bookings.get(court, [])["start_end_times"]:
             if pref_end > booked_start and pref_start < booked_end:
                 conflict = True
         if not conflict:
