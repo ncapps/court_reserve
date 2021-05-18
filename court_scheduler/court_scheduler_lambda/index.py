@@ -27,7 +27,7 @@ def handler(event=None, context=None):
     Returns
         Response (dict):
     """
-
+    dry_run = CONFIG["DRY_RUN"].lower() == "true"
     try:
         # Get court reserve secrets and court preferences from AWS secrets manager
         settings = json.loads(get_secret_value(CONFIG["SECRET_ID"]))
@@ -56,7 +56,7 @@ def handler(event=None, context=None):
         weekday_name = booking_date.strftime("%A").lower()
         players = settings["PREFERENCES_V2"][weekday_name]["players"]
         court, start, end = open_court
-        court_reserve.create_reservation(court, start, end, players)
+        court_reserve.create_reservation(court, start, end, players, dry_run)
 
     except KeyError as err:
         # TODO Lambda return value
@@ -69,8 +69,6 @@ def handler(event=None, context=None):
         # TODO Lambda return value
         # Login failure
         logger.exception(err)
-
-    # Get existing reservations
 
 
 if __name__ == "__main__":

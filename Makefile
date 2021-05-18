@@ -13,7 +13,6 @@ endif
 
 DRY_RUN ?= false
 DAYS_OFFSET ?= 3
-LOG_LEVEL ?= DEBUG
 SECRET_ID ?= court_reserve_secret
 
 # Default - top level rule is what gets run when you just `make`

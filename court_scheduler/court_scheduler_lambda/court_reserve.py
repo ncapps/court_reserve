@@ -216,18 +216,59 @@ class CourtReserveAdapter:
 
         return court_bookings
 
+    @staticmethod
+    def _merge_bookings(bookings: list) -> list:
+        """Merge contiguous bookings
+
+        Args:
+            bookings (list): List of start and end times
+
+        Returns:
+            List of merged bookings
+        """
+        if not bookings:
+            return bookings
+
+        # Sort by start time
+        _bookings = bookings.copy()
+        _bookings.sort(key=lambda x: x[0])
+        merged_list = [(_bookings[0])]
+
+        for current_start_time, current_end_time in _bookings[1:]:
+            # check if the current start time is less than the end time of the
+            # latest end time in the merged list
+            last_merged_start, last_merged_end = merged_list[-1]
+
+            if current_start_time <= last_merged_end:
+                merged_list[-1] = (
+                    last_merged_start,
+                    max(current_end_time, last_merged_end),
+                )
+            else:
+                merged_list.append((current_start_time, current_end_time))
+
+        return merged_list
+
     def create_reservation(
-        self, court: str, start: datetime, end: datetime, players: list
-    ):
+        self,
+        court: str,
+        start: datetime,
+        end: datetime,
+        players: list,
+        dry_run: bool = False,
+    ) -> None:
         """Creates a court reservation
 
         Args:
             start (datetime): Reservation start date and time
             end (datetime): Reservation end date and time
             court (str): Court label (i.e. "Court #1")
+            players (list): List of player names (i.e. ["Naomi Osaka"])
+            dry_run (bool): Defaults to False. When dry run mode is enabled a reservation is
+                            not created.
 
         Returns:
-            TBD
+            None
         """
         path = f"Reservations/CreateReservationCourtsview/{self.org_id}"
         params = {
@@ -283,7 +324,7 @@ class CourtReserveAdapter:
         response = self._request("GET", path, params=params, headers=self.http_headers)
         player2 = json.loads(response.text)[0]
 
-        body = (
+        payload = (
             f"__RequestVerificationToken={token}&"
             f"Id={self.org_id}&"
             f"OrgId={self.org_id}&"
@@ -340,37 +381,15 @@ class CourtReserveAdapter:
             "X-Requested-With=XMLHttpRequest"
         )
 
-        print(body)
+        if dry_run:
+            logger.warning("Dry run mode enabled.")
+            logger.warning("Reservation payload: %s", payload)
+            return
 
-    @staticmethod
-    def _merge_bookings(bookings: list) -> list:
-        """Merge contiguous bookings
+        path = f"Reservations/CreateReservation/{self.org_id}"
+        response = self._request("POST", path, data=payload, headers=self.http_headers)
+        json_resp = json.loads(response.text)
 
-        Args:
-            bookings (list): List of start and end times
+        assert json_resp["isValid"]
 
-        Returns:
-            List of merged bookings
-        """
-        if not bookings:
-            return bookings
-
-        # Sort by start time
-        _bookings = bookings.copy()
-        _bookings.sort(key=lambda x: x[0])
-        merged_list = [(_bookings[0])]
-
-        for current_start_time, current_end_time in _bookings[1:]:
-            # check if the current start time is less than the end time of the
-            # latest end time in the merged list
-            last_merged_start, last_merged_end = merged_list[-1]
-
-            if current_start_time <= last_merged_end:
-                merged_list[-1] = (
-                    last_merged_start,
-                    max(current_end_time, last_merged_end),
-                )
-            else:
-                merged_list.append((current_start_time, current_end_time))
-
-        return merged_list
+        logger.info("%s reserved at %s", court, start.strftime("%I:%M %p %Z"))
