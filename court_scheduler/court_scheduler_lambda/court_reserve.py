@@ -32,9 +32,6 @@ class CourtReserveAdapter:
 
         Returns:
             None
-
-        Raises:
-            TBD
         """
         self.org_id = org_id
         self.session_id = None
@@ -52,9 +49,6 @@ class CourtReserveAdapter:
 
         Returns:
             Response object
-
-        Raises:
-            AssertionError
         """
         request = requests.Request(
             method.upper(), f"https://app.courtreserve.com/Online/{path}", **kwargs
@@ -73,7 +67,7 @@ class CourtReserveAdapter:
             None
 
         Raises:
-            TBD
+            AssertionError when login attempt fails
         """
         path = f"Account/Login/{self.org_id}"
         payload = {"UserNameOrEmail": username, "Password": password}
@@ -269,6 +263,9 @@ class CourtReserveAdapter:
 
         Returns:
             None
+
+        Raises:
+            AssertionError when reservation creation fails
         """
         path = f"Reservations/CreateReservationCourtsview/{self.org_id}"
         params = {
