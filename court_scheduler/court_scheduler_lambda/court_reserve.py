@@ -276,6 +276,16 @@ class CourtReserveAdapter:
         }
         response = self._request("GET", path, params=params, headers=self.http_headers)
         soup = BeautifulSoup(response.text, "html.parser")
+
+        # Check if a reservation has already been made
+        has_max_courts = (
+            str(soup.find("p", class_="confirm-message")).find(
+                "reached max number of courts allowed"
+            )
+            != -1
+        )
+        assert not has_max_courts, "Max number of courts allowed already reserved."
+
         token = soup.select_one("#createReservation-Form input")["value"]
         court_id = soup.find("input", id="CourtId")["value"]
         member_id = soup.find("input", id="MemberId")["value"]
@@ -379,7 +389,7 @@ class CourtReserveAdapter:
         )
 
         if dry_run:
-            logger.warning("Dry run mode enabled.")
+            logger.warning("Dry run mode enabled. Court will not be reserved.")
             logger.warning("Reservation payload: %s", payload)
             return
 
