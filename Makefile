@@ -62,15 +62,13 @@ tmp/template.yaml: tmp/.court_scheduler_lambda.sentinel
 > mkdir --parents $(@D)
 > cdk synth CourtSchedulerPipeline/Prod/CourtScheduler --no-staging > $@
 
+# Executes court scheduler in a lambda-like environment in a docker container
 local-invoke: tmp/template.yaml
 > function_name=$(shell yq eval '.Outputs.ExportcourtSchedulerFunctionName.Value.Ref' $<)
 > sam local invoke "$${function_name}" --no-event --template-file $<
 .PHONY: local-invoke
 
-deploy-pipeline: .env
-> cdk deploy
-.PHONY: deploy-pipeline
-
+# Executes court scheduler in dev environment (not lambda)
 run-dev: .env
 > @export $(shell cat .env | xargs)
 > @cd court_scheduler/court_scheduler_lambda
