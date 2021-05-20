@@ -88,7 +88,7 @@ class CourtReserveAdapter:
         soup = BeautifulSoup(response.text, "html.parser")
         bookings_path = soup.select_one("li.sub-menu-li a")["href"]
         self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
-        logger.info("Found session id: %s", self.session_id)
+        logger.debug("Found session id: %s", self.session_id)
 
         self.http_headers = {
             "authority": "app.courtreserve.com",
@@ -177,7 +177,7 @@ class CourtReserveAdapter:
             headers=self.http_headers,
         )
         json_resp = json.loads(response.text)
-        logger.info("Found %s reservations", json_resp["Total"])
+        logger.debug("Found %s reservations", json_resp["Total"])
 
         tz_obj = tz.obj = tz.gettz(time_zone)
         court_bookings = {}
@@ -389,8 +389,8 @@ class CourtReserveAdapter:
         )
 
         if dry_run:
-            logger.warning("Dry run mode enabled. Court will not be reserved.")
-            logger.warning("Reservation payload: %s", payload)
+            logger.info("Dry run mode enabled. Court will not be reserved.")
+            logger.debug("Reservation payload: %s", payload)
             return
 
         path = f"Reservations/CreateReservation/{self.org_id}"
