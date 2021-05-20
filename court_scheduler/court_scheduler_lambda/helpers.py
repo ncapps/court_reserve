@@ -78,17 +78,23 @@ def court_preferences(preferences, booking_date):
         )
 
     weekday_name = booking_date.strftime("%A").lower()
+    start_end_times = preferences[weekday_name]["start_end_times"]
+    courts = preferences[weekday_name]["courts"]
     if not preferences.get(weekday_name, None):
         logger.info("Preferences not found for %s", weekday_name)
         return []
 
-    prefs = [
+    logger.info(
+        "Found %s start times for %s courts on %s in preferences.",
+        len(start_end_times),
+        len(courts),
+        weekday_name,
+    )
+    return [
         (court, (str_to_date(start), str_to_date(end)))
-        for start, end in preferences[weekday_name]["start_end_times"]
-        for court in preferences[weekday_name]["courts"]
+        for start, end in start_end_times
+        for court in courts
     ]
-    logger.info("Found %s preferences for %s", len(prefs), weekday_name)
-    return prefs
 
 
 def find_open_court(bookings, preferences):

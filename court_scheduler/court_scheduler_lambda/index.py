@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" app.courtreserve.com adapter """
+""" Court scheduler lambda handler """
 import logging
 import logging.config
 import os
@@ -80,9 +80,14 @@ def handler(event=None, context=None):
         response["statusCode"] = 500
         response["body"]["message"] = f"{err}"
     else:
-        response["body"][
-            "message"
-        ] = f"{court} reserved at {start.strftime('%I:%M %p %Z')}"
+        if dry_run:
+            response["body"][
+                "message"
+            ] = f"Dry run complete. {court} was not reserved at {start.strftime('%I:%M %p %Z')}"
+        else:
+            response["body"][
+                "message"
+            ] = f"{court} reserved at {start.strftime('%I:%M %p %Z')}"
 
     return response
 
