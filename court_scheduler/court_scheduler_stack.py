@@ -1,4 +1,4 @@
-""" court_reserve_stack
+""" CourtSchedulerStack
 """
 from aws_cdk.core import Stack, Construct, Duration, BundlingOptions
 from aws_cdk import (
@@ -14,7 +14,9 @@ CONFIG = {**dotenv_values(".env")}
 
 
 class CourtSchedulerStack(Stack):
-    """Creates tennis court reservation"""
+    """CourtScheduler application stack includes a lambda function
+    and CloudWatch event to trigger the lambda function
+    """
 
     def __init__(self, scope: Construct, construct_id, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)

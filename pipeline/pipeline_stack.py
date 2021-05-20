@@ -6,7 +6,7 @@ from aws_cdk.aws_codebuild import BuildEnvironment, LinuxBuildImage
 import aws_cdk.aws_codepipeline as codepipeline
 import aws_cdk.aws_codepipeline_actions as codepipeline_actions
 
-from court_scheduler.court_scheduler_stage import CourtScheduler
+from court_scheduler.court_scheduler_stage import CourtSchedulerStage
 
 
 class PipelineStack(Stack):
@@ -53,4 +53,6 @@ class PipelineStack(Stack):
             cross_account_keys=False,
         )
 
-        pipeline.add_application_stage(CourtScheduler(self, "Prod", env=kwargs["env"]))
+        pipeline.add_application_stage(
+            CourtSchedulerStage(self, "Prod", env=kwargs["env"])
+        )
