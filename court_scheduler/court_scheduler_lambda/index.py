@@ -66,19 +66,19 @@ def handler(event=None, context=None):
     except KeyError as err:
         logger.exception(err)
         response["statusCode"] = 500
-        response["body"]["message"] = err
+        response["body"]["message"] = f"{err}"
     except ClientError as err:
         logger.exception(err)
         response["statusCode"] = 500
-        response["body"]["message"] = err
+        response["body"]["message"] = f"{err}"
     except TypeError as err:
         logger.exception(err)
         response["statusCode"] = 500
-        response["body"]["message"] = err
+        response["body"]["message"] = f"{err}"
     except AssertionError as err:
         logger.exception(err)
         response["statusCode"] = 500
-        response["body"]["message"] = err
+        response["body"]["message"] = f"{err}"
     else:
         response["body"][
             "message"

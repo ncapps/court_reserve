@@ -13,8 +13,8 @@ from dotenv import dotenv_values
 CONFIG = {**dotenv_values(".env")}
 
 
-class CourtReserveStack(Stack):
-    """Reserves court time on app.courtreserve.com"""
+class CourtSchedulerStack(Stack):
+    """Creates tennis court reservation"""
 
     def __init__(self, scope: Construct, construct_id, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -25,7 +25,7 @@ class CourtReserveStack(Stack):
             "Function",
             description="Reserves a tennis court",
             code=lambda_.Code.from_asset(
-                path="court_scheduler/court_reserve_lambda",
+                path="court_scheduler/court_scheduler_lambda",
                 bundling=BundlingOptions(
                     image=lambda_.Runtime.PYTHON_3_8.bundling_image,
                     command=[
@@ -37,7 +37,7 @@ class CourtReserveStack(Stack):
             ),
             environment={**CONFIG},
             runtime=lambda_.Runtime.PYTHON_3_8,
-            handler="court_reserve.handler",
+            handler="index.handler",
             memory_size=512,
             timeout=Duration.seconds(30),
             log_retention=logs.RetentionDays.TWO_WEEKS,
@@ -57,4 +57,4 @@ class CourtReserveStack(Stack):
         )
         secret.grant_read(lambda_fn)
 
-        self.export_value(lambda_fn.function_name, name="lambdaCronFunctionName")
+        self.export_value(lambda_fn.function_name, name="courtSchedulerFunctionName")
