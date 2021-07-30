@@ -135,7 +135,7 @@ class CourtReserveAdapter:
         court_criteria = [
             str(script.string)
             for script in soup.select(
-                "#wrapper div.content div.row div.col-lg-12 script"
+                "#expanded-page div.content div.row div.col-lg-12 script"
             )
             if pattern.search(str(script.string)) is not None
         ][0]
