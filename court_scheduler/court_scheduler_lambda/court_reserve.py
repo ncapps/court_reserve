@@ -86,7 +86,7 @@ class CourtReserveAdapter:
 
         # Get session id
         soup = BeautifulSoup(response.text, "html.parser")
-        bookings_path = soup.select_one("li.sub-menu-li a")["href"]
+        bookings_path = soup.select_one("#respMenu li:nth-child(2) li a")["href"]
         self.session_id = re.search("sId=([0-9]+)", bookings_path).group(1)
         logger.debug("Found session id: %s", self.session_id)
 
@@ -135,7 +135,7 @@ class CourtReserveAdapter:
         court_criteria = [
             str(script.string)
             for script in soup.select(
-                "#wrapper div.content div.row div.col-lg-12 script"
+                "#expanded-page div.content div.row div.col-lg-12 script"
             )
             if pattern.search(str(script.string)) is not None
         ][0]
